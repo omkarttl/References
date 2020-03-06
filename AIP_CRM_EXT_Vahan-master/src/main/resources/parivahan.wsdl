@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<definitions xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:wsp="http://www.w3.org/ns/ws-policy" xmlns:wsp1_2="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://service.web.homologation.transport.nic/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://schemas.xmlsoap.org/wsdl/" targetNamespace="http://service.web.homologation.transport.nic/" name="dataportws">
+    <types>
+        <xs:schema xmlns:tns="http://service.web.homologation.transport.nic/" xmlns:xs="http://www.w3.org/2001/XMLSchema" version="1.0" targetNamespace="http://service.web.homologation.transport.nic/">
+            <xs:element name="InventoryDetails" type="tns:inventoryDetailsDobj" />
+            <xs:element name="upload" type="tns:upload" />
+            <xs:element name="uploadResponse" type="tns:uploadResponse" />
+            <xs:complexType name="upload">
+                <xs:sequence>
+                    <xs:element name="userId" type="xs:string" minOccurs="0" />
+                    <xs:element name="transactionId" type="xs:string" minOccurs="0" />
+                    <xs:element name="inventoryDetails" type="tns:inventoryDetailsDobj" nillable="true" minOccurs="0" maxOccurs="unbounded" />
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="inventoryDetailsDobj">
+                <xs:sequence>
+                    <xs:element name="chassisNo" type="xs:string" minOccurs="0" />
+                    <xs:element name="colorCode" type="xs:string" minOccurs="0" />
+                    <xs:element name="dealerCode" type="xs:string" minOccurs="0" />
+                    <xs:element name="engineNo" type="xs:string" minOccurs="0" />
+                    <xs:element name="featureCode" type="xs:string" minOccurs="0" />
+                    <xs:element name="monthYear" type="xs:string" minOccurs="0" />
+                    <xs:element name="unique_model_ref_no" type="xs:string" minOccurs="0" />
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="uploadResponse">
+                <xs:sequence>
+                    <xs:element name="return" type="xs:string" minOccurs="0" />
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>
+    </types>
+    <message name="upload">
+        <part name="parameters" element="tns:upload" />
+    </message>
+    <message name="uploadResponse">
+        <part name="parameters" element="tns:uploadResponse" />
+    </message>
+    <portType name="dataportws">
+        <operation name="upload">
+            <input wsam:Action="http://service.web.homologation.transport.nic/dataportws/uploadRequest" message="tns:upload" />
+            <output wsam:Action="http://service.web.homologation.transport.nic/dataportws/uploadResponse" message="tns:uploadResponse" />
+        </operation>
+    </portType>
+    <binding name="dataportwsPortBinding" type="tns:dataportws">
+        <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document" />
+        <operation name="upload">
+            <soap:operation soapAction="" />
+            <input>
+                <soap:body use="literal" />
+            </input>
+            <output>
+                <soap:body use="literal" />
+            </output>
+        </operation>
+    </binding>
+    <service name="dataportws">
+        <port name="dataportwsPort" binding="tns:dataportwsPortBinding">
+            <soap:address location="https://vahan.parivahan.gov.in/makerws/dataportws" />
+        </port>
+    </service>
+</definitions>

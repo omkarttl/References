@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans           http://www.springframework.org/schema/beans/spring-beans.xsd                  http://camel.apache.org/schema/spring                 http://camel.apache.org/schema/spring/camel-spring.xsd">
+	<camelContext id="camel"
+		xmlns="http://camel.apache.org/schema/spring">
+		<propertyPlaceholder id="properties" location="application.properties"/>
+		<!-- REST Producer using Camel REST -->
+		<restConfiguration apiContextPath="docs"
+			component="servlet" contextPath="/api/mobility">
+			<!-- Setup swagger API descriptions -->
+			<apiProperty key="host" value="{{host}}" />
+			<apiProperty key="base.path" value="/mobility" />
+			<apiProperty key="api.version"
+				value="{{swagger.api.version}}" />
+			<apiProperty key="api.title"
+				value="{{swagger.api.title}}" />
+			<apiProperty key="api.description"
+				value="{{swagger.api.desc}}" />
+			<apiProperty key="api.contact.name"
+				value="{{swagger.api.contact}}" />
+		</restConfiguration>
+		<rest id="vor-mobility">
+			<!-- START OF REST CONFIG -->
+			<!-- Login API -->
+			<post consumes="application/json" produces="application/json"
+				uri="/login" type="org.tml.esb.LoginInput">
+				<param name="body" type="body"
+					description="To get login token from mobility" />
+				<responseMessage code="200"
+					message="Request is valid" />
+				<responseMessage code="400"
+					message="Request Validation failed" />
+				<responseMessage code="500"
+					message="Server is unavailable" />
+				<to uri="direct:getToken" />
+			</post>
+			<!-- Locations for Part Details -->
+			<post consumes="application/json" produces="application/json"
+				uri="/locforpart" type="org.tml.esb.LocforPart">
+				<param name="body" type="body"
+					description="To get location for parts from mobility" />
+				<responseMessage code="200"
+					message="Request is valid" />
+				<responseMessage code="400"
+					message="Request Validation failed" />
+				<responseMessage code="500"
+					message="Server is unavailable" />
+				<to uri="direct:getLocforPart" />
+			</post>
+		</rest>
+		<!-- Login Route -->
+		<route id="getToken">
+			<from id="_from1" uri="direct:getToken" />
+			<log id="_log1"
+				message="Login :: REQUEST FROM :: *********** ${header.X-Forwarded-For}" />
+			<doTry id="_doTry1">
+				<log id="_log2"
+					message="Login :: REQUEST :: *********** ${body}" />
+				<to id="_to2" uri="{{login.endpoint}}" />
+				<setBody>
+					<constant>{"token":{"access_token":"3D8TSc1Qk4GT33At6IyLU8f77Qi3aK","token_type":"Bearer","expires_in":14400,"refresh_token":"OS9YvNlDo9OjvXFSVZiio3XLvDApik","scope":"read write"},"data":{"Contact_No":null,"User_ID":"PRDUSER1","User_segment_flag":"N","User_Name":"PRDUSER1-DVOR","Email_ID":"PRDUSER1test.com"}}</constant>
+				</setBody>
+				<log id="_log3"
+					message="Login :: RESPONSE :: *********** ${body}" />
+				<doCatch id="_doCatch2">
+					<exception>java.lang.Exception</exception>
+					<log id="_log20"
+						message="Error Occured :: ******************** ${exception.stacktrace}" />
+					<setBody id="_setBody15">
+						<constant>{"error":"Error Occured. Please check Logs"}</constant>
+					</setBody>
+				</doCatch>
+			</doTry>
+		</route>
+		<!-- Locations for Part Route -->
+		<route id="getLocforPart">
+			<from id="_from2" uri="direct:getLocforPart" />
+			<doTry id="_doTry2">
+				<convertBodyTo type="String" charset="UTF-8" />
+				<log id="_log4"
+					message="LocforPart :: REQUEST FROM :: *********** ${header.X-Forwarded-For}" />
+				<log id="_log5"
+					message="LocforPart :: REQUEST :: *********** ${body}" />
+				<to id="_to4" uri="{{locforpart.endpoint}}" />
+				<setBody>
+					<constant>{"data":[{"dealer_location_longitude":"72.97","part_count":95.0,"dealer_id":"1-1IJGRE6","dealer_name":"AUTO XPERTS","loc_type":"division","dealer_location_latitude":"19.21"},{"dealer_location_longitude":"72.976114","part_count":896.0,"dealer_id":"1-1IJGRE5","dealer_name":"AUTO XPERTS","loc_type":"division","dealer_location_latitude":"19.221188"},{"dealer_location_longitude":"72.977637","part_count":5.0,"dealer_id":"1-55I6F0","dealer_name":"BAFNA Motors (Mumbai)","loc_type":"division","dealer_location_latitude":"19.224457"},{"dealer_location_longitude":"73.051357","part_count":122.0,"dealer_id":"1-EVO6K5","dealer_name":"KAPOOR DIESELS GARAGE PVT LTD","loc_type":"division","dealer_location_latitude":"19.283183"}]}</constant>
+				</setBody>
+				<log id="_log6"
+					message="LocforPart :: RESPONSE :: *********** ${body}" />
+				<setHeader headerName="Content-Type">
+					<constant>application/json</constant>
+				</setHeader>
+				<doCatch id="_doCatch4">
+					<exception>java.lang.Exception</exception>
+					<log id="_log22"
+						message="LocforPart :: Exception Occured :: ******************** ${exception.stacktrace}" />
+					<setBody id="_setBody17">
+						<constant>{"error":"Error Occured. Please check Logs"}</constant>
+					</setBody>
+				</doCatch>
+			</doTry>
+		</route>
+	</camelContext>
+	<bean
+		class="org.apache.camel.component.servlet.CamelHttpTransportServlet"
+		id="camelHttpTransportServlet" />
+	<bean
+		class="org.springframework.boot.web.servlet.ServletRegistrationBean"
+		id="servlet">
+		<property name="name" value="CamelServlet" />
+		<property name="servlet" ref="camelHttpTransportServlet" />
+		<property name="urlMappings" value="/api/mobility/*" />
+	</bean>
+</beans>

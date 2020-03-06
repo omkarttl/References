@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:cxf="http://camel.apache.org/schema/cxf"
+    xmlns:http-conf="http://cxf.apache.org/transports/http/configuration"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd   http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd   http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd  http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd">
+    <cxf:cxfEndpoint
+        address="http://{{fuse.endpoint.host}}:{{fuse.endpoint.port}}/getPlantDetails"
+        id="getPlantEndpoint" serviceClass="org.tml.esb.LocforPartSAP">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <cxf:cxfEndpoint address="{{sap.endpoint}}"
+        endpointName="ZSDCRM_VOR_SALES_ORDER" id="sapVorOrderEndpoint" wsdlURL="getPlantSAP.wsdl">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <camelContext id="camelContext-8c77a6e5-42c0-4ddf-8dfc-ef93d79a531e"
+        streamCache="true" xmlns="http://camel.apache.org/schema/spring">
+        <propertyPlaceholder id="properties" location="application.properties"/>
+        <route id="_route1">
+            <from id="_from1" uri="cxf:bean:getPlantEndpoint"/>
+            <doTry id="_doTry1">
+                <bean id="_bean1"
+                    method="sourceIp(REQUEST FROM :: **********)" ref="logger"/>
+                <bean id="_bean2"
+                    method="request(Request :: ***********)" ref="logger"/>
+                <setHeader headerName="Authorization" id="_setHeader1">
+                    <simple>Basic {{sap.endpoint.token}}</simple>
+                </setHeader>
+                <bean id="_bean3"
+                    method="request(Calling SAP :: ***********)" ref="logger"/>
+                <to id="_to1" uri="mock:cxf:bean:sapVorOrderEndpoint"/>
+                <bean id="_bean4"
+                    method="response(SAP Response :: ***********)" ref="logger"/>
+                <bean id="_bean5"
+                    method="response(Response :: ***********)" ref="logger"/>
+                <doCatch id="_doCatch1">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <setFaultBody id="_setFaultBody1">
+                        <constant>Exception Occurred.Timout while calling SAP</constant>
+                    </setFaultBody>
+                    <log id="_log1" message="Exception Occured :: ******************** ${exception.stacktrace}"/>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>
+                    <setFaultBody id="_setFaultBody2">
+                        <constant>Exception Occurred.Please check logs</constant>
+                    </setFaultBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader2">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log2" message="Exception Occured :: ******************** ${exception.stacktrace}"/>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+    <bean class="org.tml.esb.LogAggregator" id="logger"/>
+</beans>

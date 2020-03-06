@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:cxf="http://camel.apache.org/schema/cxf" xmlns:http-conf="http://cxf.apache.org/transports/http/configuration"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd 
+	http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd 
+	http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+	http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd">
+
+	<cxf:cxfEndpoint
+		address="http://{{fuse.endpoint.host}}:{{fuse.endpoint.port}}/getPlantDetails"
+		id="getPlantEndpoint" serviceClass="org.tml.esb.LocforPartSAP">
+		<cxf:properties>
+			<entry key="dataFormat" value="MESSAGE" />
+		</cxf:properties>
+	</cxf:cxfEndpoint>
+	<cxf:cxfEndpoint address="{{sap.endpoint}}"
+		endpointName="ZSDCRM_VOR_SALES_ORDER" id="sapVorOrderEndpoint"
+		wsdlURL="getPlantSAP.wsdl">
+		<cxf:properties>
+			<entry key="dataFormat" value="MESSAGE" />
+		</cxf:properties>
+	</cxf:cxfEndpoint>
+	<http-conf:conduit name=".*http-conduit">
+		<http-conf:client ReceiveTimeout="${timeout}" />
+	</http-conf:conduit>
+
+	<camelContext streamCache="true"
+		xmlns="http://camel.apache.org/schema/spring">
+		<route>
+			<from uri="cxf:bean:getPlantEndpoint" />
+			<doTry>
+				<bean method="sourceIp(REQUEST FROM :: **********)" ref="logger" />
+				<bean method="request(Request :: ***********)" ref="logger" />
+				<setHeader headerName="Authorization">
+					<simple>Basic {{sap.endpoint.token}}</simple>
+				</setHeader>
+				<bean method="request(Calling SAP :: ***********)" ref="logger" />
+				<to uri="cxf:bean:sapVorOrderEndpoint" />
+				<bean method="response(SAP Response :: ***********)" ref="logger" />
+				<bean method="response(Response :: ***********)" ref="logger" />
+				<doCatch>
+					<exception>java.net.SocketTimeoutException</exception>
+					<setFaultBody>
+						<constant>Exception Occurred.Timout while calling SAP</constant>
+					</setFaultBody>
+					<log message="Exception Occured :: ******************** ${exception.stacktrace}" />
+				</doCatch>
+				<doCatch>
+					<exception>java.lang.Exception</exception>
+					<setFaultBody>
+						<constant>Exception Occurred.Please check logs</constant>
+					</setFaultBody>
+					<setHeader headerName="Exchange.HTTP_RESPONSE_CODE">
+						<constant>500</constant>
+					</setHeader>
+					<log message="Exception Occured :: ******************** ${exception.stacktrace}" />
+				</doCatch>
+			</doTry>
+		</route>
+	</camelContext>
+	  <bean class="org.tml.esb.LogAggregator" id="logger"/>
+</beans>

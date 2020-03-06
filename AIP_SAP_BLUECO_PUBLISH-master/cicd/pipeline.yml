@@ -1,0 +1,18 @@
+kind: 'BuildConfig'
+apiVersion: 'v1'
+metadata:
+  name: 'publish-master-pipeline'
+  namespace: cicd
+spec:
+  source:
+    git:
+      ref: master
+      uri: 'https://github.com/tmlconnected/AIP_SAP_BLUECO_PUBLISH.git'
+    sourceSecret:
+      name: github-op  
+  strategy:
+    jenkinsPipelineStrategy:
+      env:
+      - name: PROJECT
+        value: dev-esb
+      jenkinsfilePath: 'Jenkinsfile'

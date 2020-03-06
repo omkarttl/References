@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd">
+	<bean
+		class="org.apache.camel.component.servlet.CamelHttpTransportServlet"
+		id="camelHttpTransportServlet" />
+	<bean
+		class="org.springframework.boot.web.servlet.ServletRegistrationBean"
+		id="servlet">
+		<property name="name" value="CamelServlet" />
+		<property name="servlet" ref="camelHttpTransportServlet" />
+		<property name="urlMappings" value="/api/*" />
+	</bean>
+	<bean class="org.tml.esb.SapRequestProcessor" id="processor" />
+	<bean class="org.tml.esb.SapResponseProcessor" id="processorResp" />
+	<bean class="org.tml.esb.LogAggregator" id="logger" />
+
+	<camelContext id="_tmlHDFC" streamCache="true"
+		xmlns="http://camel.apache.org/schema/spring"
+		xmlns:env="http://www.w3.org/2003/05/soap-envelope"
+		xmlns:n0="urn:sap-com:document:sap:rfc:functions"
+		xmlns:soap="http://www.w3.org/2003/05/soap-envelope"
+		xmlns:soap-env="http://schemas.xmlsoap.org/soap/envelope/"
+		xmlns:urn="urn:sap-com:document:sap:rfc:functions">
+		<dataFormats>
+			<json id="js" library="Jackson"
+				unmarshalTypeName="org.tml.esb.ItemObj" />
+			<jacksonxml id="jack"
+				unmarshalTypeName="org.tml.esb.SapResponse" />
+		</dataFormats>
+		<restConfiguration apiContextPath="docs"
+			component="servlet" contextPath="/api">
+			<apiProperty key="schemes" value="http" />
+			<apiProperty key="host" value="0.0.0.0:8080" />
+			<apiProperty key="base.path" value="/api" />
+			<apiProperty key="api.title" value="Banking HDFC" />
+			<apiProperty key="api.description" value="Banking HDFC" />
+			<apiProperty key="api.contact.name"
+				value="TATA Motors API Team" />
+		</restConfiguration>
+		<rest id="rest-06039eae-5f06-4e8f-89d8-370927e9bd70" path="/tml">
+			<post consumes="application/json"
+				id="post-49fd2030-a421-472e-8164-ca4b9ecb3ce6"
+				produces="application/json" uri="/fundPosting">
+				<description>TML HDFC Banking Use Case</description>
+				<param dataType="string" name="Request Body" required="true"
+					type="body" />
+				<responseMessage code="200" message="Success" />
+				<responseMessage code="400" message="Bad Request" />
+				<responseMessage code="500"
+					message="Internal Server Error" />
+				<to uri="direct:restHdfc" />
+			</post>
+		</rest>
+		<route id="_rT1-HDFC_Tml" streamCache="true">
+			<from id="_from1" uri="direct:restHdfc" />
+			<doTry id="_doTry1">
+				<bean id="_bean1" method="sourceIp(REQUEST FROM :: **********)"
+					ref="logger" />
+				<setHeader headerName="Content-Type" id="_setHeader1">
+					<constant>application/json</constant>
+				</setHeader>
+				<setHeader headerName="accept" id="_setHeader2">
+					<constant>application/json</constant>
+				</setHeader>
+				<unmarshal id="_unmarshal1" ref="js" />
+				<process id="_process1" ref="processor" />
+				<marshal id="_marshal1" ref="jack" />
+				<to id="_to2" uri="xslt:classpath:sapsoapreq.xslt" />
+				<to id="_to1" uri="mock:SAP" />
+				<!-- Expected hardcoded response from SAP -->
+				<setBody id="_setBody1">
+					<simple>
+				&lt;env:Envelope
+				xmlns:env="http://www.w3.org/2003/05/soap-envelope"&gt;
+				&lt;env:Header/&gt;
+				&lt;env:Body&gt;
+				&lt;n0:ZFIRFC_BANK_ECOLLECTION_CITIResponse xmlns:n0="urn:sap-com:document:sap:rfc:functions"&gt;
+				&lt;E_ACK/&gt;
+				&lt;I_ZFI_BANK_ECOLLECTION_CITI&gt;
+				&lt;item&gt;
+				&lt;HDFC_REF&gt;CSBKR92018010910000329&lt;/HDFC_REF&gt;
+				&lt;BANK_ACC&gt;HCVTML11E4150&lt;/BANK_ACC&gt;
+				&lt;AMOUNT&gt;100.34&lt;/AMOUNT&gt;
+				&lt;DOC_DATE&gt;2018-05-21&lt;/DOC_DATE&gt;
+				&lt;DEALER&gt;2105500&lt;/DEALER&gt;
+				&lt;BUSTYP&gt;HCVTML&lt;/BUSTYP&gt;
+				&lt;STATUS&gt;1&lt;/STATUS&gt;
+				&lt;UTR_NO&gt;CSBKR92018010910000329&lt;/UTR_NO&gt;
+				&lt;REMARK&gt;0000105500 is not valid&lt;/REMARK&gt;
+				&lt;DEALERD&gt;0000105500&lt;/DEALERD&gt;
+				&lt;/item&gt;
+				&lt;/I_ZFI_BANK_ECOLLECTION_CITI&gt;
+				&lt;/n0:ZFIRFC_BANK_ECOLLECTION_CITIResponse&gt;
+				&lt;/env:Body&gt;
+				&lt;/env:Envelope&gt; </simple>
+				</setBody>
+				<setBody id="_setBody2">
+					<xpath>//n0:ZFIRFC_BANK_ECOLLECTION_CITIResponse/I_ZFI_BANK_ECOLLECTION_CITI/item</xpath>
+				</setBody>
+				<unmarshal id="_unmarshal2" ref="jack" />
+				<process id="_process2" ref="processorResp" />
+				<marshal id="_marshal2" ref="js" />
+				<doCatch id="_doCatch1">
+					<exception>java.net.SocketTimeoutException</exception>
+					<setBody id="_setBody5">
+						<simple>{"error":"Exception Occurred while calling SAP"}</simple>
+					</setBody>
+					<setHeader headerName="Exchange.HTTP_RESPONSE_CODE"
+						id="_setHeader12">
+						<constant>500</constant>
+					</setHeader>
+					<log id="_log9" message="Exception :: ${exception.stacktrace}" />
+				</doCatch>
+				<doCatch id="_doCatch2">
+					<exception>java.lang.Exception</exception>
+					<setBody id="_setBody6">
+						<simple>{"error":"Exception Occurred"}</simple>
+					</setBody>
+					<setHeader headerName="Exchange.HTTP_RESPONSE_CODE"
+						id="_setHeader13">
+						<constant>500</constant>
+					</setHeader>
+					<log id="_log10" message="Exception :: ${exception.stacktrace}" />
+				</doCatch>
+			</doTry>
+		</route>
+	</camelContext>
+</beans>

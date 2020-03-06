@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:cxf="http://camel.apache.org/schema/cxf"
+    xmlns:http-conf="http://cxf.apache.org/transports/http/configuration"
+    xmlns:p="http://cxf.apache.org/policy"
+    xmlns:sec="http://cxf.apache.org/configuration/security"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://cxf.apache.org/policy http://cxf.apache.org/schemas/policy.xsd        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd        http://camel.apache.org/schema/spring       http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf           http://camel.apache.org/schema/cxf/camel-cxf.xsd http://cxf.apache.org/transports/http/configuration     http://cxf.apache.org/schemas/configuration/http-conf.xsd http://cxf.apache.org/configuration/security http://cxf.apache.org/schemas/configuration/security.xsd ">
+    <cxf:cxfEndpoint
+        address="http://{{fuse.endpoint.host}}:{{fuse.endpoint.port}}/createSalesOrder"
+        id="createSalesOrderEndpoint" serviceClass="org.tml.esb.salesorder.CreateSalesOrder">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <cxf:cxfEndpoint address="{{sap.endpoint}}"
+        endpointName="ZSDCRM_SALES_ORDER" id="sapSalesOrderEndpoint" wsdlURL="spareOrder.wsdl">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <!-- <cxf:cxfEndpoint address="{{crm.endpoint}}" endpointName="Default" 
+		id="crmSalesOrderUpdateEndpoint" wsdlURL="crmDev.wsdl"> <cxf:properties> 
+		<entry key="dataFormat" value="MESSAGE" /> </cxf:properties> </cxf:cxfEndpoint> -->
+    <camelContext id="camel" streamCache="true"
+        xmlns="http://camel.apache.org/schema/spring"
+        xmlns:sal="urn:sap-com:document:sap:soap:functions:mc-style" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+       <propertyPlaceholder id="properties" location="application.properties"/>
+        <dataFormats>
+            <jacksonxml id="jack" prettyPrint="true" unmarshalTypeName="org.tml.esb.salesorder.SAPResponse"/>
+        </dataFormats>
+        
+        <route id="createSalesOrder">
+            <from id="_from1" uri="cxf:bean:createSalesOrderEndpoint"/>
+            <doTry id="_doTry1">
+                <bean id="_bean1"
+                    method="sourceIp(REQUEST FROM :: **********)" ref="logger"/>
+                <bean id="_bean2"
+                    method="request(Request from CRM :: ***********)" ref="logger"/>
+                <setProperty id="_setProperty1" propertyName="BU">
+                    <xpath>//sal:ZsdrfcCreateSalesOrder/BU/text()</xpath>
+                </setProperty>
+                <setProperty id="_setProperty2" propertyName="OrderId">
+                    <xpath>//sal:ZsdrfcCreateSalesOrder/OrderId/text()</xpath>
+                </setProperty>
+                <setProperty id="_setProperty3" propertyName="ReqDate">
+                    <xpath>//sal:ZsdrfcCreateSalesOrder/ReqDate/text()</xpath>
+                </setProperty>
+                <setProperty id="_setProperty4" propertyName="OrderReason">
+                    <xpath>//sal:ZsdrfcCreateSalesOrder/OrderReason/text()</xpath>
+                </setProperty>
+                <to id="_to2" uri="xslt:classpath:xmltrnsform.xslt"/>
+                <!-- <setProperty id="_setProperty5" propertyName="actualBodyProp"> <simple>${body}</simple> 
+					</setProperty> <setBody id="_setBody1"> <constant>&lt;soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+					xmlns:urn="urn:sap-com:document:sap:soap:functions:mc-style"&gt; &lt;soapenv:Body&gt; 
+					&lt;urn:ZsdrfcCreateSalesOrderResponse&gt; &lt;status&gt;Please wait,Order 
+					is in process.&lt;/status&gt; &lt;/urn:ZsdrfcCreateSalesOrderResponse&gt; 
+					&lt;/soapenv:Body&gt; &lt;/soapenv:Envelope&gt;</constant> </setBody> <bean 
+					id="_bean4" method="response(Response to CRM :: ***********)" ref="logger" 
+					/> <to id="_to2" uri="seda:sapProcessing?waitForTaskToComplete=Never" /> -->
+                <to id="_to3" uri="direct:sapProcessing"/>
+                <doCatch id="_doCatch2">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log2" message="Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setHeader headerName="responseCode504" id="_setHeader3">
+                        <constant>Gateway Timeout</constant>
+                    </setHeader>
+                    <to id="_to4" uri="direct:crmResponse"/>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>
+                    <setFaultBody id="_setFaultBody2">
+                        <constant>Exception Occurred.Please check logs</constant>
+                    </setFaultBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader4">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log2" message="Exception Occured :: ******************** ${exception.stacktrace}"/>
+                </doCatch>
+            </doTry>
+        </route>
+        <route handleFault="true" id="sapProcessing" streamCache="true">
+            <!-- <from id="_from2" uri="seda:sapProcessing?concurrentConsumers=4" 
+				/> -->
+            <from id="_from2" uri="direct:sapProcessing"/>
+            <!-- <setBody id="_setBody2"> <simple>${property[actualBodyProp]}</simple> 
+				</setBody> -->
+            <setHeader headerName="operationName" id="_setHeader1">
+                <constant>ZsdrfcCreateSalesOrder</constant>
+            </setHeader>
+            <setHeader headerName="Authorization" id="_setHeader2">
+                <constant>Basic {{sap.endpoint.token}}</constant>
+            </setHeader>
+            <bean id="_bean5"
+                method="request(Calling SAP :: ***********)" ref="logger"/>
+            <to id="_to1" uri="mock:cxf:bean:sapSalesOrderEndpoint"/>
+            <bean id="_bean6"
+                method="response(SAP Response :: ***********)" ref="logger"/>
+            <setHeader headerName="faultString" id="_setHeader5">
+                <xpath resultType="java.lang.String">//soapenv:Body/soapenv:Fault/faultstring/text()</xpath>
+            </setHeader>
+            <setHeader headerName="faultCode" id="_setHeader6">
+                <xpath resultType="java.lang.String">//soapenv:Body/soapenv:Fault/faultcode/text()</xpath>
+            </setHeader>
+            <choice id="_choice1">
+                <when id="_when1">
+                    <simple>${header.faultString.length} &gt; 0</simple>
+                </when>
+                <when id="_when2">
+                    <simple>${header.CamelHttpResponseCode} == '500'</simple>
+                    <setHeader headerName="responseCode500" id="_setHeader7">
+                        <constant>Internal Server Error</constant>
+                    </setHeader>
+                </when>
+                <when id="_when3">
+                    <simple>${header.CamelHttpResponseCode} == '502'</simple>
+                    <setHeader headerName="responseCode502" id="_setHeader10">
+                        <constant>Connection Timeout</constant>
+                    </setHeader>
+                </when>
+                <when id="_when4">
+                    <simple>${header.CamelHttpResponseCode} == '503'</simple>
+                    <setHeader headerName="responseCode503" id="_setHeader11">
+                        <constant>Service Unavailable</constant>
+                    </setHeader>
+                </when>
+                <when id="_when5">
+                    <simple>${header.CamelHttpResponseCode} == '504'</simple>
+                    <setHeader headerName="responseCode504" id="_setHeader12">
+                        <constant>Gateway Timeout</constant>
+                    </setHeader>
+                </when>
+                <otherwise id="_otherwise1">
+                    <setBody id="_setBody3">
+                        <xpath>//soapenv:Body/sal:ZsdrfcCreateSalesOrderResponse</xpath>
+                    </setBody>
+                    <unmarshal id="_unmarshal1" ref="jack"/>
+                </otherwise>
+            </choice>
+            <to id="_to5" uri="direct:crmResponse"/>
+            <!--<marshal id="_marshal1" ref="jack"/> <setBody id="_setBody4"> <simple>&lt;soapenv:Envelope 
+				xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:asi="http://siebel.com/asi/" 
+				xmlns:ord="http://www.siebel.com/xml/Order%20Interface"&gt; &lt;soapenv:Header&gt; 
+				&lt;wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/07/secext"&gt; 
+				&lt;wsse:UsernameToken xmlns:wsu="http://schemas.xmlsoap.org/ws/2002/07/utility"&gt; 
+				&lt;wsse:Username&gt;{{crm.username}}&lt;/wsse:Username&gt; &lt;wsse:Password 
+				Type="wsse:PasswordText"&gt;{{crm.password}}&lt;/wsse:Password&gt; &lt;/wsse:UsernameToken&gt; 
+				&lt;/wsse:Security&gt; &lt;/soapenv:Header&gt; &lt;soapenv:Body&gt; ${body} 
+				&lt;/soapenv:Body&gt; &lt;/soapenv:Envelope&gt; </simple> </setBody> <setHeader 
+				headerName="SOAPAction" id="_setHeader7"> <simple>"document/http://siebel.com/asi/:SiebelOrderUpdate"</simple> 
+				</setHeader> <log id="_log5" message="${header.SOAPAction}" /> <bean id="_bean8" 
+				method="request(Calling CRM :: ***********)" ref="logger" /> <to id="_to3" 
+				uri="mock:cxf:bean:crmSalesOrderUpdateEndpoint" /> <bean id="_bean9" method="response(CRM 
+				Response :: ***********)" ref="logger" /> -->
+        </route>
+        <route id="crmResponse">
+            <from id="_from3" uri="direct:crmResponse"/>
+            <bean id="_bean3" method="createCRMRequest" ref="crmRequest"/>
+            <to id="_to6" uri="xslt:classpath:xmltrnsform.xslt"/>
+            <bean id="_bean4"
+                method="response(CRM Response :: ***********)" ref="logger"/>
+        </route>
+    </camelContext>
+    <bean class="org.tml.esb.salesorder.CRMRequest" id="crmRequest"/>
+    <bean class="org.tml.esb.LogAggregator" id="logger"/>
+</beans>

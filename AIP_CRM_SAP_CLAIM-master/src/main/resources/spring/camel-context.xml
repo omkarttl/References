@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:cxf="http://camel.apache.org/schema/cxf"
+    xmlns:http-conf="http://cxf.apache.org/transports/http/configuration"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="         http://www.springframework.org/schema/beans                http://www.springframework.org/schema/beans/spring-beans.xsd                      http://camel.apache.org/schema/cxf           http://camel.apache.org/schema/cxf/camel-cxf.xsd                           http://camel.apache.org/schema/spring                 http://camel.apache.org/schema/spring/camel-spring.xsd                    http://cxf.apache.org/transports/http/configuration     http://cxf.apache.org/schemas/configuration/http-conf.xsd">
+    <!-- ESB Generation CXF Endpoint -->
+    <cxf:cxfEndpoint address="${sourceGenEndpointAddress}"
+        id="amcClaimGen" serviceClass="${sourceGenServiceClass}" wsdlURL="{{sourceGenWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <!-- ESB Validation CXF Endpoint -->
+    <cxf:cxfEndpoint address="${sourceValEndpointAddress}"
+        id="amcClaimVal" serviceClass="${sourceValServiceClass}" wsdlURL="{{sourceValWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <!-- SAP Validation CXF Endpoint -->
+    <cxf:cxfEndpoint address="${destValEndpointAddress}"
+        id="sap_validation" wsdlURL="{{destValWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <!-- SAP Generation CXF Endpoint -->
+    <cxf:cxfEndpoint address="${destGenEndpointAddress}"
+        id="sap_generation" wsdlURL="{{destGenWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <http-conf:conduit name=".*http-conduit">
+        <http-conf:client ReceiveTimeout="${timeout}"/>
+    </http-conf:conduit>
+    <camelContext id="camel" streamCache="true" xmlns="http://camel.apache.org/schema/spring">
+        <propertyPlaceholder id="properties" location="classpath:application.properties"/>
+        <!--amcClaim Route started -->
+        <route id="amcClaimGen">
+            <from id="_from1" uri="cxf:bean:amcClaimGen"/>
+            <bean id="_bean1"
+                method="sourceIp(REQUEST FROM :: ********** )" ref="logger"/>
+            <doTry id="_doTry1">
+                <setHeader headerName="Authorization" id="_setHeadergen">
+                    <simple>Basic {{esb_sap_user_key}}</simple>
+                </setHeader>
+                <log message="User key=${header.Authorization}"/>
+                <bean id="_bean2"
+                    method="request(Request Body to SAP Generation Endpoint from ESB Generation :---------)" ref="logger"/>
+                <to id="_to1" uri="cxf:bean:sap_generation?defaultOperationName=ZsdrfcAmcClaimGeneration"/>
+                <bean id="_bean3"
+                    method="response(Response Body From SAP Endpoint to ESB Generation :-------)" ref="logger"/>
+                <doCatch id="_doCatch1">
+                    <exception>java.net.SocketTimeoutException</exception>                                        
+                    <setFaultBody id="_setBody4">
+                        <constant>Timeout Exception while calling SAP Claim Generation Service.</constant>
+                    </setFaultBody>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>                                        
+                    <setFaultBody id="_setBody5">
+                        <constant>Error Occurred. Please check Logs.</constant>
+                    </setFaultBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <route id="amcCalimVal">
+            <from id="_from2" uri="cxf:bean:amcClaimVal"/>
+            <bean id="_bean4"
+                method="sourceIp(REQUEST FROM :: **********)" ref="logger"/>
+            <doTry id="_doTry2">
+                <setHeader headerName="Authorization" id="_setHeaderval">
+                    <simple>Basic {{esb_sap_user_key}}</simple>
+                </setHeader>
+                <bean id="_bean5"
+                    method="request(Request Body to SAP Validation Endpoint from ESB Validation :--------)" ref="logger"/>
+                <to id="_to2" uri="cxf:bean:sap_validation?defaultOperationName=ZSDRFC_AMC_CONTRACT_VALIDATION"/>
+                <bean id="_bean6"
+                    method="response(Response Body From SAP Endpoint to ESB Validation :----------)" ref="logger"/>
+                <doCatch id="_doCatch3">
+                    <exception>java.net.SocketTimeoutException</exception>                    
+                    <setFaultBody id="_setBody9">
+                        <constant>Timeout Exception while calling SAP Claim Validation Service.</constant>
+                    </setFaultBody>
+                </doCatch>
+                <doCatch id="_doCatch4">
+                    <exception>java.lang.Exception</exception>                    
+                    <setFaultBody id="_setBody10">
+                        <constant>Error Occurred. Please check Logs.</constant>
+                    </setFaultBody>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+    <bean class="org.tml.esb.LogAggregator" id="logger"/>
+</beans>

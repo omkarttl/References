@@ -1,0 +1,458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:cxf="http://camel.apache.org/schema/cxf"
+	xmlns:p="http://cxf.apache.org/policy"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd">
+	<cxf:cxfEndpoint
+		address="http://{{fuse.endpoint.host}}:{{fuse.endpoint.port}}/accountExtract"
+		id="AccountExtractEndpoint" serviceClass="org.tml.esb.AccountExtract">
+		<cxf:properties>
+			<entry key="dataFormat" value="MESSAGE" />
+		</cxf:properties>
+	</cxf:cxfEndpoint>
+	<bean
+		class="org.apache.camel.component.servlet.CamelHttpTransportServlet"
+		id="camelHttpTransportServlet" />
+	<bean
+		class="org.springframework.boot.web.servlet.ServletRegistrationBean"
+		id="servlet">
+		<property name="name" value="CamelServlet" />
+		<property name="servlet" ref="camelHttpTransportServlet" />
+		<property name="urlMappings" value="/api/*" />
+	</bean>
+	<!-- configure the Camel SQL component to use the JDBC data source -->
+	<bean class="org.apache.camel.component.sql.SqlComponent"
+		id="sqlComponent">
+		<property name="dataSource" ref="oracle-ds" />
+	</bean>
+	<!-- Configures an Outbound DB Connection -->
+	<bean
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource"
+		id="oracle-ds">
+		<property name="driverClassName"
+			value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+	<bean class="org.tml.esb.ResponseProcessor" id="Response" />
+	<bean class="org.tml.esb.ResponseProcessorSoap" id="ResponseSoap" />
+	<bean class="org.tml.esb.CalculationResponse"
+		id="calculateResponse" />
+	<bean class="org.tml.esb.CalculationResponseSoap"
+		id="calculateResponseSoap" />
+	<bean class="org.tml.esb.DateProcessor" id="dateProcessor" />
+	<!-- <bean class="org.tml.config.JdgConnectionManagerImpl" id="JdgConnectionManagerImpl" 
+		/> -->
+	<bean class="org.tml.esb.QueryChecker" id="queryChecker" />
+	<bean class="org.tml.esb.DbProcessor" id="dbProcessor" />
+
+
+	<camelContext id="_JDG-AccountExtract" streamCache="true"
+		xmlns="http://camel.apache.org/schema/spring"
+		xmlns:ns="https://tatamotors.com/api/1.0"
+		xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+		<dataFormats>
+			<json id="js" library="Jackson"
+				unmarshalTypeName="org.tml.esb.AccountExtractResponse" include="NON_NULL"/>
+
+			<jacksonxml id="jack"
+				unmarshalTypeName="org.tml.esb.AccountExtractSoapResponse" />
+		</dataFormats>
+		<restConfiguration apiContextPath="docs"
+			component="servlet" contextPath="/api">
+			<apiProperty key="schemes" value="{{swagger.schemes}}" />
+			<apiProperty key="host" value="{{swagger.host}}" />
+			<apiProperty key="base.path" value="/api" />
+			<apiProperty key="api.title"
+				value="{{swagger.api.title}}" />
+			<apiProperty key="api.description"
+				value="{{swagger.api.desc}}" />
+			<apiProperty key="api.contact.name"
+				value="{{swagger.api.contact}}" />
+		</restConfiguration>
+		<rest id="rest-d4f089e2-2a80-4eef-af00-9df3a1f0eb0e">
+			<post consumes="application/json"
+				id="post-a130b144-9caa-42ca-a242-ce7d364e64e4"
+				produces="application/json" uri="/accountExtract">
+				<description>Get an entry from a cache</description>
+				<param name="body" required="true" type="body" />
+				<responseMessage code="200" message="Success" />
+				<responseMessage code="400" message="Bad Request" />
+				<responseMessage code="500"
+					message="Internal Server Error" />
+				<to uri="direct:getAccountDataRest" />
+			</post>
+		</rest>
+		<route id="_getAccountDataREST" streamCache="true">
+			<from id="_from1" uri="direct:getAccountDataRest" />
+			<doTry id="_doTry1">
+				<setHeader headerName="invoiceDate" id="_setHeader1">
+					<jsonpath>$.invoiceDate</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceEndDate" id="_setHeader2">
+					<jsonpath>$.invoiceEndDate</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceMonth" id="_setHeader3">
+					<jsonpath>$.invoiceMonth</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceYear" id="_setHeader4">
+					<jsonpath>$.invoiceYear</jsonpath>
+				</setHeader>
+				<setHeader headerName="startDate" id="_setHeader5">
+					<simple>01-${header.invoiceMonth}-${header.invoiceYear}</simple>
+				</setHeader>
+				<setHeader headerName="status" id="_setHeader6">
+					<jsonpath>$.status</jsonpath>
+				</setHeader>
+				<setHeader headerName="salesOrder" id="_setHeader7">
+					<jsonpath>$.salesOrder</jsonpath>
+				</setHeader>
+				<setHeader headerName="divisionCode" id="_setHeader8">
+					<jsonpath>$.divisionCode</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceNo" id="_setHeader9">
+					<jsonpath>$.invoiceNo</jsonpath>
+				</setHeader>
+				<log id="_log1" message="Request Body == ${body}" />
+				<setProperty id="_setProperty1"
+					propertyName="RequestBodyRest">
+					<simple>${body}</simple>
+				</setProperty>
+				<choice id="_choice1">
+					<when id="_when1">
+						<simple>${header.invoiceDate} == '' or ${header.invoiceDate} == null</simple>
+						<log id="_log2"
+							message="invoiceDate is null and most obviously invoiceEndDate should also be null" />
+						<process id="_process1" ref="dateProcessor" />
+						<log id="_log3"
+							message="Start Date :: ${header.startDate} :: End Date :: ${header.invoiceEndDate}" />
+						<!-- Check if data is available in DB or JDG with given Month and Year 
+							as first and end date of the month -->
+
+						<!-- <bean method="getJDGDateData" ref="JdgDateCheck"/> -->
+						<setHeader headerName="JDG_StartDate" id="_setHeader10">
+							<simple>31-Mar-2019</simple>
+						</setHeader>
+						<setHeader headerName="JDG_EndDate" id="_setHeader11">
+							<simple>20-Feb-2020</simple>
+						</setHeader>
+						<!-- Check if Requested start and end date falls between JDG start 
+							and End Dates -->
+						<setHeader headerName="invoiceDate">
+							<simple>${header.startDate}</simple>
+						</setHeader>
+						<setHeader headerName="dateFlag">
+							<simple>0</simple>
+						</setHeader>
+						<bean method="queryCheck" ref="queryChecker" />
+						<log id="_log4" message="QueryFlag = ${header.QueryFlag}" />
+						
+						<choice id="_choice3">
+							<!-- Set QueryFlag = JDG, when JDG StartDate and JDG_EndDate are greater 
+								than or equal to ${header.startDate} and ${header.invoiceEndDate} respectively -->
+							<when id="_when3">
+								<simple>${header.QueryFlag} == 'JDG'</simple>
+								<log id="_log5" message="Querying JDG..." />
+								<to id="_to1" uri="mock:JDG" />
+								<!-- After DB/JDG RESPONSE, Convert it to JSON : -->
+							</when>
+							<otherwise id="_otherwise1">
+								<log id="_log6" message="Querying DB..." />
+								<!-- <to id="_to2" uri="mock:DB" /> -->
+								<!-- After DB/JDG RESPONSE, Convert it to JSON : -->
+								<to uri="sqlComponent:{{sql.selectAccountDataMonthYear}}?outputType=SelectList&amp;outputClass=org.tml.esb.AccountExtractResponse" />
+								<log message="Response after DB Query : ${body}" />
+								<marshal ref="js" />
+							</otherwise>
+						</choice>
+						<unmarshal id="_unmarshal1" ref="js" />
+						<log id="_log7"
+							message="Current Date = ${date:now:dd-MMM-yyyy}" />
+						<process id="_process2" ref="Response" />
+						<log id="_log8" message="after processor ${body}" />
+						<bean id="_bean1" method="calulateLogic"
+							ref="calculateResponse" />
+						<marshal id="_marshal1" ref="js" />
+						<log id="_log9"
+							message="After marshal, Final Response = ${body}" />
+						<!-- <setBody> <simple>{"response":"Database query to extract details 
+							for a month - ${header.invoiceMonth} of Year - ${header.invoiceYear}"} </simple> 
+							</setBody> -->
+					</when>
+					<otherwise id="_otherwise3">
+						<log id="_log10" message="invoiceDate is Not null" />
+						<choice id="_choice2">
+							<when id="_when2">
+								<simple>${header.invoiceEndDate} == '' or ${header.invoiceEndDate} == null</simple>
+								<log id="_log11" message="invoiceEndDate is null" />
+								<!-- Check if data is available in DB or JDG to extract details for 
+									a single date -->
+								<!-- <bean method="getJDGDateData" ref="JdgDateCheck"/> -->
+								<setHeader headerName="JDG_StartDate"
+									id="_setHeader12">
+									<simple>31-Mar-2018</simple>
+								</setHeader>
+								<setHeader headerName="JDG_EndDate" id="_setHeader13">
+									<simple>20-Feb-2019</simple>
+								</setHeader>
+
+								<!-- Check if Requested InvoiceDate falls between JDG start and End 
+									Dates. In Other words, InvoiceDate should be less than ${header.JDG_StartDate} 
+									and ${header.JDG_EndDate} -->
+								<setHeader headerName="dateFlag">
+									<simple>1</simple>
+								</setHeader>
+								<bean method="queryCheck" ref="queryChecker" />
+
+								<choice id="_choice4">
+									<!-- Set QueryFlag = JDG, when InvoiceDate is less than both JDG 
+										Start and End Dates -->
+									<when id="_when4">
+										<simple>${header.QueryFlag} == 'JDG'</simple>
+										<log id="_log12" message="Querying JDG..." />
+										<to id="_to3" uri="mock:JDG" />
+										<!-- After DB/JDG RESPONSE, Convert it to JSON : -->
+									</when>
+									<otherwise id="_otherwise4">
+										<log id="_log13" message="Querying DB..." />
+										<!-- <to id="_to4" uri="mock:DB" /> -->
+										<!-- After DB/JDG RESPONSE, Convert it to JSON : -->
+										<log
+											message="DB Query Single  :: {{sql.selectAccountDataSingleDate}}" />
+										<to
+											uri="sqlComponent:{{sql.selectAccountDataSingleDate}}?outputType=SelectList&amp;outputClass=org.tml.esb.AccountExtractResponse" />
+									</otherwise>
+								</choice>
+								<split streaming="true">
+									<simple>${body}</simple>
+									<bean id="_bean2" method="calulateLogic" ref="calculateResponse" />
+								</split>
+								<marshal ref="js"/>
+								<log id="_log16"
+									message="After marshal, Final Response = ${body}" />
+							</when>
+							<otherwise id="_otherwise2">
+								<log id="_log17"
+									message="invoiceDate and invoiceEnddate are NOT null" />
+								<!-- Check if data is available in DB or JDG for some Start and End 
+									Date -->
+								<!-- <bean method="getJDGDateData" ref="JdgDateCheck"/> -->
+								<setHeader headerName="JDG_StartDate"
+									id="_setHeader14">
+									<simple>31-Mar-2018</simple>
+								</setHeader>
+								<setHeader headerName="JDG_EndDate" id="_setHeader15">
+									<simple>20-Feb-2019</simple>
+								</setHeader>
+								<!-- Check if Requested InvoiceDate is less than JDG start and InvoiceEndDate 
+									is less than JDG End Date. In Other words, InvoiceDate should be less than 
+									${header.JDG_StartDate} and InvoiceEndDate with ${header.JDG_EndDate} -->
+								<setHeader headerName="dateFlag">
+									<simple>0</simple>
+								</setHeader>
+								<bean method="queryCheck" ref="queryChecker" />
+								<choice id="_choice5">
+									<when id="_when5">
+										<simple>${header.QueryFlag} == 'JDG'</simple>
+										<log id="_log18" message="Querying JDG..." />
+										<to id="_to5" uri="mock:JDG" />
+										<!-- After DB/JDG RESPONSE, Convert it to JSON : -->
+									</when>
+									<otherwise id="_otherwise5">
+										<log id="_log19" message="Querying DB..." />
+										<!-- <to id="_to6" uri="mock:DB" /> -->
+										<!-- After DB/JDG RESPONSE, Convert it to JSON : -->
+										<to uri="sqlComponent:{{sql.selectAccountDataFromTo}}?outputType=SelectList&amp;outputClass=org.tml.esb.AccountExtractResponse" />
+										<log message="Response after DB Query : ${body}" />
+										<marshal ref="js" />
+									</otherwise>
+								</choice>
+								<unmarshal id="_unmarshal3" ref="js" />
+								<log id="_log20"
+									message="Current Date = ${date:now:dd-MMM-yyyy}" />
+								<process id="_process4" ref="Response" />
+								<log id="_log21" message="after processor ${body}" />
+								<bean id="_bean3" method="calulateLogic"
+									ref="calculateResponse" />
+								<marshal id="_marshal3" ref="js" />
+								<log id="_log22"
+									message="After marshal, Final Response = ${body}" />
+								<!-- <setBody> <simple>{"response":"Database query to extract details 
+									between ${header.invoiceDate} to ${header.invoiceEndDate}"}</simple> </setBody> -->
+							</otherwise>
+						</choice>
+					</otherwise>
+				</choice>
+				<doCatch id="_doCatch1">
+					<exception>java.sql.SQLException</exception>
+					<log id="_log23"
+						message="SQL Exception Occured :: ********** ${exception.stacktrace}" />
+					<setHeader headerName="Exchange.HTTP_RESPONSE_CODE"
+						id="_setHeader16">
+						<constant>500</constant>
+					</setHeader>
+					<setBody id="_setBody1">
+						<constant>{"error":"SQL Exception occurred. Please check logs."}</constant>
+					</setBody>
+					<setHeader headerName="Content-Type" id="_setHeader17">
+						<simple>application/json</simple>
+					</setHeader>
+				</doCatch>
+				<doCatch id="_doCatch2">
+					<exception>java.lang.Exception</exception>
+					<log id="_log24"
+						message="Exception Occured :: ********** ${exception.stacktrace}" />
+					<setHeader headerName="Exchange.HTTP_RESPONSE_CODE"
+						id="_setHeader18">
+						<constant>500</constant>
+					</setHeader>
+					<setBody id="_setBody2">
+						<constant>{"error":"Exception occurred. Please check logs."}</constant>
+					</setBody>
+					<setHeader headerName="Content-Type" id="_setHeader19">
+						<simple>application/json</simple>
+					</setHeader>
+				</doCatch>
+			</doTry>
+		</route>
+		<route>
+			<from uri="direct:split" />
+			<log message="Split Body::: ${body}" />
+		</route>
+		<route id="_getAccountDataSOAP" streamCache="true">
+			<from id="_from2" uri="cxf:bean:AccountExtractEndpoint" />
+			<doTry id="_doTry2">
+				<log id="_log25" message="Request received >> ${body}" />
+				<setHeader headerName="invoiceDate" id="_setHeader20">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/INVOICE_DATE/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceEndDate" id="_setHeader21">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/INVOICE_END_DATE/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceMonth" id="_setHeader22">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/INVOICE_MONTH/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceYear" id="_setHeader23">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/INVOICE_YEAR/text()</xpath>
+				</setHeader>
+				<setHeader headerName="startDate" id="_setHeader24">
+					<simple>01-${header.invoiceMonth}-${header.invoiceYear}</simple>
+				</setHeader>
+				<setHeader headerName="status" id="_setHeader25">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/STATUS/text()</xpath>
+				</setHeader>
+				<setHeader headerName="salesOrder" id="_setHeader26">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/SALESORDER/text()</xpath>
+				</setHeader>
+				<setHeader headerName="divisionCode" id="_setHeader27">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/DIVISION_CODE/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceNo" id="_setHeader28">
+					<xpath>//ns:ACCOUNT_EXTRACT_API/item/INVOICE_NO/text()</xpath>
+				</setHeader>
+				<setProperty id="_setProperty2"
+					propertyName="RequestBodySoap">
+					<simple>${body}</simple>
+				</setProperty>
+				<choice id="_choice6">
+					<when id="_when6">
+						<simple>${header.invoiceDate} == '' or ${header.invoiceDate} == null</simple>
+						<log id="_log26" message="invoiceDate is null" />
+						<process id="_process5" ref="dateProcessor" />
+						<log id="_log27"
+							message="Start Date :: ${header.startDate} :: End Date :: ${header.invoiceEndDate}" />
+						<!-- Check if data is available in DB or JDG with given Month and Year 
+							as first and end date of the month -->
+						<to id="_to7" uri="mock:DB" />
+						<!-- After DB/JDG RESPONSE, Convert it to XML : -->
+						<!-- <to uri="sqlComponent:{{sql.selectAccountDataMonthYear}}" /> <log 
+							message="Response after DB Query : ${body}"/> <marshal ref="jack"/> -->
+						<unmarshal id="_unmarshal4" ref="jack" />
+						<log id="_log28"
+							message="Current Date = ${date:now:dd-MMM-yyyy}" />
+						<process id="_process6" ref="ResponseSoap" />
+						<log id="_log29" message="after processor ${body}" />
+						<bean id="_bean4" method="calulateLogic"
+							ref="calculateResponseSoap" />
+						<marshal id="_marshal4" ref="jack" />
+						<log id="_log30"
+							message="After marshal, Final Response = ${body}" />
+						<to id="_to8" uri="xslt:AccountExtractResponse.xslt" />
+						<!-- <setBody> <simple>{"response":"Database query to extract details 
+							for a month - ${header.invoiceMonth} of Year - ${header.invoiceYear}"} </simple> 
+							</setBody> -->
+					</when>
+					<otherwise id="_otherwise6">
+						<log id="_log31" message="invoiceDate is Not null" />
+						<choice id="_choice7">
+							<when id="_when7">
+								<simple>${header.invoiceEndDate} == '' or ${header.invoiceEndDate} == null</simple>
+								<log id="_log32" message="invoiceEndDate is null" />
+								<!-- Check if data is available in DB or JDG to extract details for 
+									a single date -->
+								<to id="_to9" uri="mock:DB-JDG" />
+								<!-- After DB-JDG RESPONSE, Convert it to JSON : -->
+								<!-- <to uri="sqlComponent:{{sql.selectAccountDataSingleDate}}" /> 
+									<log message="Response after DB Query :: ${body}"/> <marshal ref="jack"/> -->
+								<unmarshal id="_unmarshal5" ref="jack" />
+								<log id="_log33"
+									message="Current Date = ${date:now:dd-MMM-yyyy}" />
+								<process id="_process7" ref="ResponseSoap" />
+								<log id="_log34" message="after processor ${body}" />
+								<bean id="_bean5" method="calulateLogic"
+									ref="calculateResponseSoap" />
+								<marshal id="_marshal5" ref="jack" />
+								<log id="_log35"
+									message="After marshal, Final Response = ${body}" />
+								<to id="_to10" uri="xslt:AccountExtractResponse.xslt" />
+								<!-- <setBody> <simple>{"response":"Database query to extract details 
+									for date - ${header.invoiceDate}"} </simple> </setBody> -->
+							</when>
+							<otherwise id="_otherwise7">
+								<log id="_log36"
+									message="invoiceDate and invoiceEnddate are NOT null" />
+								<!-- Check if data is available in DB or JDG for some Start and End 
+									Date -->
+								<to id="_to11" uri="mock:DB-JDG" />
+								<!-- After DB- JDG RESPONSE, Convert it to JSON : -->
+								<!-- <to uri="sqlComponent:{{sql.selectAccountDataFromTo}}" /> <log 
+									message="Response after DB query ::: ${body}"/> <marshal ref="jack"/> -->
+								<unmarshal id="_unmarshal6" ref="jack" />
+								<log id="_log37"
+									message="Current Date = ${date:now:dd-MMM-yyyy}" />
+								<process id="_process8" ref="ResponseSoap" />
+								<log id="_log38" message="after processor ${body}" />
+								<bean id="_bean6" method="calulateLogic"
+									ref="calculateResponseSoap" />
+								<marshal id="_marshal6" ref="jack" />
+								<log id="_log39"
+									message="After marshal, Final Response = ${body}" />
+								<to id="_to12" uri="xslt:AccountExtractResponse.xslt" />
+								<!-- <setBody> <simple>{"response":"Database query to extract details 
+									between ${header.invoiceDate} to ${header.invoiceEndDate}"}</simple> </setBody> -->
+							</otherwise>
+						</choice>
+					</otherwise>
+				</choice>
+				<doCatch id="_doCatch3">
+					<exception>java.sql.SQLException</exception>
+					<log id="_log40"
+						message="SQL Exception Occured :: ********** ${exception.stacktrace}" />
+					<setFaultBody id="_setFaultBody1">
+						<constant>SQL Exception occurred. Please check logs.</constant>
+					</setFaultBody>
+				</doCatch>
+				<doCatch id="_doCatch4">
+					<exception>java.lang.Exception</exception>
+					<log id="_log41"
+						message="Exception Occured :: ********** ${exception.stacktrace}" />
+					<setFaultBody id="_setFaultBody2">
+						<constant>Exception occurred. Please check logs.</constant>
+					</setFaultBody>
+				</doCatch>
+			</doTry>
+		</route>
+	</camelContext>
+</beans>

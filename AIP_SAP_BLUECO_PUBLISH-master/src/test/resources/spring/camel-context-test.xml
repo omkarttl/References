@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans           http://www.springframework.org/schema/beans/spring-beans.xsd                  http://camel.apache.org/schema/spring                 http://camel.apache.org/schema/spring/camel-spring.xsd">
+    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
+    	
+        <!-- REST Producer using Camel REST -->
+       <restConfiguration apiContextPath="docs" bindingMode="json"
+            component="servlet" contextPath="/api/employees">
+            <!-- Setup swagger API descriptions -->
+            <apiProperty key="host" value="localhost"/>
+            <apiProperty key="base.path" value="/employees"/>
+            <apiProperty key="api.version" value="1.0.0-SNAPSHOT"/>
+            <apiProperty key="api.title" value="Publish Master Data"/>
+            <apiProperty key="api.description" value="These APIs help to get various employee data like personal details, attendance, applied leaves,etc"/>
+            <apiProperty key="api.contact.name" value="Tata Motors API Team"/>
+        </restConfiguration>
+        <rest id="publishMasterData">
+            <!-- START OF REST CONFIG -->
+            <!-- HOD Details -->
+            <get consumes="application/json"
+                id="get-3ca7ea3c-d661-4cd2-b59b-5ed0d200aea0"
+                produces="application/json" uri="/hod">
+                <description>To fetch supervisor and HOD details of logged in employee</description>
+                <param dataType="string" name="pernr_no" required="true" type="header"/>
+                <param dataType="string" name="approver" required="true" type="header"/>
+                <responseMessage code="200" message="Request is valid"/>
+                <responseMessage code="400" message="Request Validation failed"/>
+                <responseMessage code="500" message="Server is unavailable"/>
+                <to uri="direct:getEmpHOD"/>
+            </get>
+            <!-- Quota Details -->
+            <get consumes="application/json"
+                id="get-b2c99077-5b96-4200-9e86-ae3ca000cded"
+                produces="application/json" uri="/quota">
+                <description>To fetch quota overview details of logged in employee</description>
+                <param dataType="string" name="pernr_no" required="true" type="header"/>
+                <param dataType="string" name="begda" required="true" type="header"/>
+                <param dataType="string" name="endda" required="true" type="header"/>
+                <param dataType="string" name="abwko" required="false" type="header"/>
+                <responseMessage code="200" message="Request is valid"/>
+                <responseMessage code="400" message="Request Validation failed"/>
+                <responseMessage code="500" message="Server is unavailable"/>
+                <to uri="direct:getEmpDataQuota"/>
+            </get>
+            <!-- Personal Details -->
+            <get consumes="application/json"
+                id="get-4f189bc2-5eb7-4b10-840c-26943dac5360"
+                produces="application/json" uri="/personal/{pernr_no}">
+                <description>To fetch personal details of logged in employee</description>
+                <param dataType="string" name="pernr_no" required="true" type="header"/>
+                <to uri="direct:getEmpDataPersonal"/>
+            </get>
+            <!-- Leave Data Details -->
+            <get consumes="application/json"
+                id="get-e8f23674-f9ef-467e-ad57-ce93607b6990"
+                produces="application/json" uri="/leaves">
+                <description>Validation and submission of leave request in SAP HCM</description>
+                <param dataType="string" name="pernr_001"
+                    required="true" type="header"/>
+                <param dataType="string" name="subty_006"
+                    required="true" type="header"/>
+                <param dataType="string" name="begda_007"
+                    required="true" type="header"/>
+                <param dataType="string" name="endda_008"
+                    required="true" type="header"/>
+                <param dataType="string" name="full_first_sec"
+                    required="false" type="header"/>
+                <param dataType="string" name="simulation"
+                    required="false" type="header"/>
+                <param dataType="string" name="Deletion"
+                    required="false" type="header"/>
+                <to uri="direct:getEmpDataLeave"/>
+            </get>
+            <!-- Attendance Details -->
+            <get consumes="application/json"
+                id="get-20479f3b-47c9-42e2-8bc6-871437f4e555"
+                produces="application/json" uri="/attendance">
+                <description>To fetch Attendance details of logged in employee</description>
+                <param dataType="string" name="pernr" required="true" type="header"/>
+                <param dataType="string" name="month" required="true" type="header"/>
+                <param dataType="string" name="year" required="true" type="header"/>
+                <to uri="direct:getEmpDataAttendance"/>
+            </get>
+            <!-- Employee ID Details -->
+            <get consumes="application/json"
+                id="get-8b1622fb-0b56-46b6-a58b-3fe759bd2c67"
+                produces="application/json" uri="/empId/{smartcard_id_no}">
+                <description>To fetch employee ID for given smart card no</description>
+                <param dataType="string" name="smartcard_id_no"
+                    required="true" type="header"/>
+                <to uri="direct:getEmpDataEmpId"/>
+            </get>
+            <!-- Leave History ID Details -->
+            <get consumes="application/json"
+                id="get-8b1622fb-0b56-46b6-a58b-3fe759bd2c68"
+                produces="application/json" uri="/leaveHistory">
+                <description>To fetch employee leave history</description>
+                <param dataType="string" name="pernr" required="true" type="header"/>
+                <param dataType="string" name="year" required="true" type="header"/>
+                <responseMessage code="200" message="Request is valid"/>
+                <responseMessage code="400" message="Request Validation failed"/>
+                <responseMessage code="500" message="Service has encountered an error"/>
+                <to uri="direct:getEmpLeaveHistory"/>
+            </get>
+        </rest>
+        <!-- HOD Route -->
+        <route id="getEmpHOD">
+            <from id="_from1" uri="direct:getEmpHOD"/>
+            <log id="_log1" message="HOD :: REQUEST FROM :: *********** ${header.X-Forwarded-For}"/>
+            <doTry id="_doTry1">
+                <choice id="_choice1">
+                    <when id="_when1">
+                        <simple>${header.pernr_no} == '' or ${header.pernr_no} == null or ${header.approver} == '' or ${header.approver} == null</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader1">
+                            <constant>400</constant>
+                            <setHeader headerName="Content-Type">
+                                <constant>application/json</constant>
+                            </setHeader>
+                        </setHeader>
+                        <setBody id="_setBody1">
+                            <simple>{"error":"Header parameter is missing or null"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when2">
+                        <simple>${header.pernr_no.length} &gt; 8 or ${header.approver.length} &gt; 132</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader2">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader3">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody2">
+                            <simple>{"error":"Header parameter size exceeded beyond limit"}</simple>
+                        </setBody>
+                    </when>
+                    <otherwise id="_otherwise1">
+                        <to id="_to1" uri="mock:getEmpHOD"/>
+                        <log id="_log2" message="HOD :: SAP Request :: *********** ${body}"/>
+                        <to id="_to2" uri="mock:sap-srfc-destination:rfcDest:ZFTM0006"/>
+                        <log id="_log3" message="HOD :: SAP RESPONSE :: *********** ${body}"/>
+                    </otherwise>
+                </choice>
+                <doCatch id="_doCatch1">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log19" message="HOD :: Exception while calling SAP :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody14">
+                        <simple>Exception while calling SAP.Please check logs</simple>
+                    </setBody>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log20" message="HOD :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody15">
+                        <constant>Error Occured. Please check Logs.</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <!-- Quota Route -->
+        <route id="getEmpDataQuota">
+            <from id="_from2" uri="direct:getEmpDataQuota"/>
+            <doTry id="_doTry2">
+                <log id="_log4" message="Quota :: REQUEST FROM :: *********** ${header.X-Forwarded-For}"/>
+                <choice id="_choice2">
+                    <when id="_when3">
+                        <simple>${header.pernr_no} == '' or ${header.pernr_no} == null or ${header.begda} == '' or ${header.begda} == null or ${header.endda} == '' or ${header.endda} == null</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader4">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader5">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody3">
+                            <simple>{"error":"Header parameter is missing or null"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when4">
+                        <simple>${header.pernr_no.length} &gt; 8 or ${header.abwko.length} &gt; 25 or ${header.begda.length} &gt; 10 or ${header.endda.length} &gt; 10</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader6">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader21">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody12">
+                            <simple>{"error":"Header parameter size exceeded beyond limit"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when12">
+                        <simple>${header.begda} not regex '^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$' or ${header.endda} not regex '^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$'</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader22">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader7">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody13">
+                            <simple>{"error":"Header begda/endda should have date format dd/mm/yyyy"}</simple>
+                        </setBody>
+                    </when>
+                    <otherwise id="_otherwise2">
+                        <to id="_to3" uri="mock:getEmpDataQuota"/>
+                        <log id="_log5" message="Quota :: SAP Request :: *********** ${body}"/>
+                        <to id="_to4" uri="mock:sap-srfc-destination:rfcDest:ZFTM0007"/>
+                        <log id="_log6" message="Quota :: RESPONSE :: *********** ${body}"/>
+                    </otherwise>
+                </choice>
+                <doCatch id="_doCatch3">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log21" message="Quota :: Exception while calling SAP :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody16">
+                        <simple>Exception while calling SAP.Please check logs</simple>
+                    </setBody>
+                </doCatch>
+                <doCatch id="_doCatch4">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log22" message="Quota :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody17">
+                        <constant>Error Occured. Please check Logs.</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <!-- Personal Route -->
+        <route id="getEmpDataPersonal">
+            <from id="_from3" uri="direct:getEmpDataPersonal"/>
+            <doTry id="_doTry3">
+                <log id="_log7" message="Personal :: REQUEST FROM :: *********** ${header.X-Forwarded-For}"/>
+                <choice id="_choice3">
+                    <when id="_when5">
+                        <simple>${header.pernr_no.length} &gt; 8 or ${header.pernr_no} == '' or ${header.pernr_no} == null</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader8">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader9">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody5">
+                            <simple>{"error":"Header parameter is missing/null or size exceeded beyond limit"}</simple>
+                        </setBody>
+                    </when>
+                    <otherwise id="_otherwise3">
+                        <to id="_to5" uri="mock:getEmpDataPersonal"/>
+                        <log id="_log8" message="Personal :: SAP Request :: *********** ${body}"/>
+                        <to id="_to6" uri="mock:sap-srfc-destination:rfcDest:ZFTM0008"/>
+                        <log id="_log9" message="Personal :: RESPONSE :: *********** ${body}"/>
+                    </otherwise>
+                </choice>
+                <doCatch id="_doCatch5">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log23" message="Personal :: Exception while calling SAP :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody18">
+                        <simple>Exception while calling SAP.Please check logs</simple>
+                    </setBody>
+                </doCatch>
+                <doCatch id="_doCatch6">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log24" message="Personal :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody19">
+                        <constant>Error Occured. Please check Logs.</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <!-- Leave Route -->
+        <route id="getEmpDataLeave">
+            <from id="_from4" uri="direct:getEmpDataLeave"/>
+            <doTry id="_doTry4">
+                <log id="_log10" message="Leave :: REQUEST FROM :: *********** ${header.X-Forwarded-For}"/>
+                <choice id="_choice4">
+                    <when id="_when6">
+                        <simple>${header.pernr_001.length} &gt; 123 or ${header.subty_006.length} &gt; 132 or ${header.endda_008.length} &gt; 10 or ${header.begda_007.length} &gt; 10 or ${header.full_first_sec.length} &gt; 132 or ${header.simulation.length} &gt; 1 or ${header.deletion.length} &gt; 132</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader10">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader11">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody6">
+                            <simple>{"error":"Header parameter size exceeded beyond limit"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when7">
+                        <simple>${header.pernr_001} == '' or ${header.subty_006} == '' or ${header.endda_008} == '' or ${header.begda_007} == '' or ${header.pernr_001} == null or ${header.subty_006} == null or ${header.endda_008} == null or ${header.begda_007} == null</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader12">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader13">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody7">
+                            <simple>{"error":"Header parameter is missing or null"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when13">
+                        <simple>${header.begda_007} not regex '^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$' or ${header.endda_008} not regex '^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$'</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader23">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader24">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody4">
+                            <simple>{"error":"Header begda_007/endda_008 should have date format dd/mm/yyyy"}</simple>
+                        </setBody>
+                    </when>
+                    <otherwise id="_otherwise4">
+                        <to id="_to7" uri="mock:getEmpDataLeave"/>
+                        <log id="_log11" message="Leave :: SAP Request :: *********** ${body}"/>
+                        <to id="_to8" uri="mock:sap-srfc-destination:rfcDest:ZFTM0009"/>
+                        <log id="_log12" message="Leave :: RESPONSE :: *********** ${body}"/>
+                    </otherwise>
+                </choice>
+                <doCatch id="_doCatch7">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log25" message="Leave :: Exception while calling SAP :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody20">
+                        <simple>Exception while calling SAP.Please check logs</simple>
+                    </setBody>
+                </doCatch>
+                <doCatch id="_doCatch8">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log26" message="Leave :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody21">
+                        <constant>Error Occured. Please check Logs.</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <!-- Attendance Route -->
+        <route id="getEmpDataAttendance">
+            <from id="_from5" uri="direct:getEmpDataAttendance"/>
+            <doTry id="_doTry5">
+                <log id="_log13" message="Attendance :: REQUEST FROM :: *********** ${header.X-Forwarded-For}"/>
+                <choice id="_choice5">
+                    <when id="_when8">
+                        <simple>${header.pernr.length} &gt; 8 or ${header.month.length} &gt; 2 or ${header.year.length} &gt; 4</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader14">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader15">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody8">
+                            <simple>{"error":"Header parameter size exceeded beyond limit"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when9">
+                        <simple>${header.pernr} == '' or ${header.month} == '' or ${header.year} == '' or ${header.pernr} == null or ${header.month} == null or ${header.year} == null</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader16">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader17">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody9">
+                            <simple>{"error":"Header parameter is missing or null"}</simple>
+                        </setBody>
+                    </when>
+                    <otherwise id="_otherwise5">
+                        <to id="_to9" uri="mock:getEmpDataAttendance"/>
+                        <log id="_log14" message="Attendance :: SAP Request :: *********** ${body}"/>
+                        <to id="_to10" uri="mock:sap-srfc-destination:rfcDest:ZFTM0011"/>
+                        <log id="_log15" message="Attendance :: RESPONSE :: *********** ${body}"/>
+                    </otherwise>
+                </choice>
+                <doCatch id="_doCatch9">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log27" message="Attendance :: Exception while calling SAP :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody22">
+                        <simple>Exception while calling SAP.Please check logs</simple>
+                    </setBody>
+                </doCatch>
+                <doCatch id="_doCatch10">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log28" message="Attendance :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody23">
+                        <constant>Error Occured. Please check Logs.</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <!-- Employee Id Route -->
+        <route id="getEmpDataEmpId">
+            <from id="_from6" uri="direct:getEmpDataEmpId"/>
+            <log id="_log16" message="EmpId :: REQUEST FROM :: *********** ${header.X-Forwarded-For}"/>
+            <doTry id="_doTry6">
+                <choice id="_choice6">
+                    <when id="_when10">
+                        <simple>${header.smartcard_id_no} == '' or ${header.smartcard_id_no} == null</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader18">
+                            <constant>400</constant>
+                            <setHeader headerName="Content-Type">
+                                <constant>application/json</constant>
+                            </setHeader>
+                        </setHeader>
+                        <setBody id="_setBody10">
+                            <simple>{"error":"Header parameter is missing or null"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when11">
+                        <simple>${header.smartcard_id_no.length} &gt; 10</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader19">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader20">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody11">
+                            <simple>{"error":"Header parameter size exceeded beyond limit"}</simple>
+                        </setBody>
+                    </when>
+                    <otherwise id="_otherwise6">
+                        <to id="_to11" uri="mock:getEmpDataEmpId"/>
+                        <log id="_log17" message="EmpId :: SAP Request :: *********** ${body}"/>
+                        <to id="_to12" uri="mock:sap-srfc-destination:rfcDest:zfpa0025"/>
+                        <log id="_log18" message="EmpId :: RESPONSE :: *********** ${body}"/>
+                    </otherwise>
+                </choice>
+                <doCatch id="_doCatch11">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log29" message="EmpId :: Exception while calling SAP :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody24">
+                        <simple>Exception while calling SAP.Please check logs</simple>
+                    </setBody>
+                </doCatch>
+                <doCatch id="_doCatch12">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log30" message="EmpId :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody25">
+                        <constant>Error Occured. Please check Logs.</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <!-- Leave history Route -->
+        <route id="getEmpLeaveHistory">
+            <from id="_from7" uri="direct:getEmpLeaveHistory"/>
+            <log id="_log31" message="LeaveHistory :: REQUEST FROM :: *********** ${header.X-Forwarded-For}"/>
+            <doTry id="_doTry7">
+                <choice id="_choice7">
+                    <when id="_when14">
+                        <simple>${header.pernr} == '' or ${header.pernr} == null or ${header.year} == '' or ${header.year} == null</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader25">
+                            <constant>400</constant>
+                            <setHeader headerName="Content-Type">
+                                <constant>application/json</constant>
+                            </setHeader>
+                        </setHeader>
+                        <setBody id="_setBody26">
+                            <simple>{"error":"Header parameter is missing or null"}</simple>
+                        </setBody>
+                    </when>
+                    <when id="_when15">
+                        <simple>${header.pernr.length} &gt; 8 or ${header.approver.year} &gt; 4</simple>
+                        <setHeader
+                            headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader26">
+                            <constant>400</constant>
+                        </setHeader>
+                        <setHeader headerName="Content-Type" id="_setHeader27">
+                            <constant>application/json</constant>
+                        </setHeader>
+                        <setBody id="_setBody27">
+                            <simple>{"error":"Header parameter size exceeded beyond limit"}</simple>
+                        </setBody>
+                    </when>
+                    <otherwise id="_otherwise7">
+                        <to id="_to13" uri="mock:getEmpLeaveHistory"/>
+                        <log id="_log32" message="LeaveHistory :: SAP Request :: *********** ${body}"/>
+                        <to id="_to14" uri="mock:sap-srfc-destination:rfcDest:ZFTM0012"/>
+                        <log id="_log33" message="LeaveHistory :: RESPONSE :: *********** ${body}"/>
+                    </otherwise>
+                </choice>
+                <doCatch id="_doCatch13">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <log id="_log34" message="LeaveHistory :: Exception while calling SAP :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody28">
+                        <simple>Exception while calling SAP.Please check logs</simple>
+                    </setBody>
+                </doCatch>
+                <doCatch id="_doCatch14">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log35" message="LeaveHistory :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody29">
+                        <constant>Error Occured. Please check Logs.</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+    
+    <bean class="org.tml.ut.CamelContextHODTest" id="getEmpHOD"/>
+    <bean class="org.tml.ut.CamelContextQuotaTest" id="getEmpDataQuota"/>
+    <bean class="org.tml.ut.CamelContextPersonalTest" id="getEmpDataPersonal"/>
+    <bean class="org.tml.ut.CamelContextLeaveTest" id="getEmpDataLeave"/>
+    <bean class="org.tml.ut.CamelContextAttendanceTest" id="getEmpDataAttendance"/>
+    <bean class="org.tml.ut.CamelContextEmpIdTest" id="getEmpDataEmpId"/>
+    <bean class="org.tml.ut.CamelContextLeaveHistoryTest" id="getEmpLeaveHistory"/>
+    
+    <bean
+        class="org.apache.camel.component.servlet.CamelHttpTransportServlet" id="camelHttpTransportServlet"/>
+    <bean
+        class="org.springframework.boot.web.servlet.ServletRegistrationBean" id="servlet">
+        <property name="name" value="CamelServlet"/>
+        <property name="servlet" ref="camelHttpTransportServlet"/>
+        <property name="urlMappings" value="/api/employees/*"/>
+    </bean>
+   <!--  <bean
+        class="org.fusesource.camel.component.sap.SapConnectionConfiguration" id="sap-configuration">
+        <property name="destinationDataStore">
+            <map>
+                <entry key="rfcDest" value-ref="rfcDestinationData"/>
+            </map>
+        </property>
+    </bean> -->
+    <!-- Configures an Outbound SAP Connection -->
+    <bean
+        class="org.fusesource.camel.component.sap.model.rfc.impl.DestinationDataImpl" id="rfcDestinationData">
+        <property name="ashost" value="${sap.ashost}"/>
+        <property name="sysnr" value="${sap.sysnr}"/>
+        <property name="client" value="${sap.client}"/>
+        <property name="user" value="${sap.user}"/>
+        <property name="passwd" value="${sap.passwd}"/>
+        <property name="lang" value="${sap.lang}"/>
+    </bean>
+</beans>

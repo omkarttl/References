@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:cxf="http://camel.apache.org/schema/cxf"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://camel.apache.org/schema/cxf           http://camel.apache.org/schema/cxf/camel-cxf.xsd   http://www.springframework.org/schema/beans           http://www.springframework.org/schema/beans/spring-beans.xsd                  http://camel.apache.org/schema/spring                 http://camel.apache.org/schema/spring/camel-spring.xsd">
+      <cxf:rsClient address="${login.endpoint}" id="login" loggingFeatureEnabled="true"/>
+      <cxf:rsClient address="${locforpart.endpoint}" id="locforpart" loggingFeatureEnabled="true"/>
+    
+    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
+        <!-- REST Producer using Camel REST -->
+        <restConfiguration apiContextPath="docs" component="servlet" contextPath="/api/mobility">
+            <!-- Setup swagger API descriptions -->
+            <dataFormatProperty key="prettyPrint" value="true"/>
+            <apiProperty key="host" value="{{swagger.host}}"/>
+            <apiProperty key="base.path" value="/mobility"/>
+            <apiProperty key="api.version" value="{{swagger.api.version}}"/>
+            <apiProperty key="api.title" value="{{swagger.api.title}}"/>
+            <apiProperty key="api.description" value="{{swagger.api.desc}}"/>
+            <apiProperty key="api.contact.name" value="{{swagger.api.contact}}"/>
+        </restConfiguration>
+        <rest id="vor-mobility">
+            <!-- START OF REST CONFIG -->
+            <!-- Login API -->
+            <post consumes="application/json"
+                id="post-b84f08f0-0a35-4ed5-9595-392d13cf07a8"
+                produces="application/json"
+                type="org.tml.esb.LoginInput" uri="/login">
+                <param description="To get login token from mobility"
+                    name="body" type="body"/>
+                <responseMessage code="200" message="Request is valid"/>
+                <responseMessage code="400" message="Request Validation failed"/>
+                <responseMessage code="500" message="Server is unavailable"/>
+                <to uri="direct:getToken"/>
+            </post>
+            <!-- Locations for Part Details -->
+            <post consumes="application/json"
+                id="post-8ddc59c3-f5db-4b73-aa0c-f30ae33060cd"
+                produces="application/json"
+                type="org.tml.esb.LocforPart" uri="/locforpart">
+                   <param
+                    description="Access Token"
+                    name="Authorization" type="header" required="true"/>
+                <param
+                    description="To get location for parts from mobility"
+                    name="body" type="body"/>
+                <responseMessage code="200" message="Request is valid"/>
+                <responseMessage code="400" message="Request Validation failed"/>
+                <responseMessage code="500" message="Server is unavailable"/>
+                <to uri="direct:getLocforPart"/>
+            </post>
+        </rest>
+     
+        <!-- Login Route -->
+        <route id="getToken" streamCache="true">
+            <from id="_from1" uri="direct:getToken"/>
+            <bean id="_bean1"
+                method="sourceIp(REQUEST FROM :: **********)" ref="logger"/>
+            <doTry id="_doTry1">
+                <bean id="_bean2"
+                    method="request(Request to Mobility Portal :: ***********)" ref="logger"/>
+                <setHeader headerName="Content-Type" id="_setHeader1">
+                    <constant>application/json</constant>
+                </setHeader>
+                <setHeader headerName="CamelHttpMethod" id="_setHeader6">
+                    <constant>POST</constant>
+                </setHeader>
+                <to pattern="InOut" uri="cxfrs:bean:login?throwExceptionOnFailure=false"/>
+                <bean id="_bean3"
+                    method="response(Response from Mobility Portal :: ***********)" ref="logger"/>
+                <setHeader headerName="Content-Type" id="_setHeader7">
+                    <constant>application/json</constant>
+                </setHeader>
+                <doCatch id="_doCatch1">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <setBody id="_setBody1">
+                        <constant>{"error":"Exception while calling Mobility.Please check logs"}</constant>
+                    </setBody>
+                    <log id="_log1" message="Login :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>
+                    <log id="_log2" message="Login :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                    <setBody id="_setBody2">
+                        <constant>{"error":"Error Occured. Please check Logs"}</constant>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+        <!-- Locations for Part Route -->
+        <route id="getLocforPart" streamCache="true">
+            <from id="_from2" uri="direct:getLocforPart"/>
+            <bean id="_bean4"
+                method="sourceIp(REQUEST FROM :: **********)" ref="logger"/>
+            <doTry id="_doTry2">
+                <bean id="_bean5"
+                    method="request(Request to Mobility Portal :: ***********)" ref="logger"/>
+                <setHeader headerName="Content-Type" id="_setHeader8">
+                    <constant>application/json</constant>
+                </setHeader>
+                <setHeader headerName="CamelHttpMethod" id="_setHeader9">
+                    <constant>POST</constant>
+                </setHeader>
+                <to pattern="InOut" uri="cxfrs:bean:locforpart?throwExceptionOnFailure=false"/>
+                <bean id="_bean6"
+                    method="response(Response from Mobility Portal :: ***********)" ref="logger"/>
+                <setHeader headerName="Content-Type" id="_setHeader10">
+                    <constant>application/json</constant>
+                </setHeader>
+                <doCatch id="_doCatch3">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <setBody id="_setBody3">
+                        <constant>{"error":"Exception while calling Mobility.Please check logs"}</constant>
+                    </setBody>
+                    <setHeader headerName="Content-Type" id="_setHeader2">
+                        <constant>application/json</constant>
+                    </setHeader>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader3">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log3" message="LocforPart :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                </doCatch>
+                <doCatch id="_doCatch4">
+                    <exception>java.lang.Exception</exception>
+                    <setBody id="_setBody17">
+                        <constant>{"error":"Error Occured. Please check Logs"}</constant>
+                    </setBody>
+                    <setHeader headerName="Content-Type" id="_setHeader4">
+                        <constant>application/json</constant>
+                    </setHeader>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader5">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log4" message="LocforPart :: Exception Occured :: ******************** ${exception.stacktrace}"/>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+    <bean
+        class="org.apache.camel.component.servlet.CamelHttpTransportServlet" id="camelHttpTransportServlet"/>
+    <bean
+        class="org.springframework.boot.web.servlet.ServletRegistrationBean" id="servlet">
+        <property name="name" value="CamelServlet"/>
+        <property name="servlet" ref="camelHttpTransportServlet"/>
+        <property name="urlMappings" value="/api/mobility/*"/>
+    </bean>
+    <bean class="org.tml.esb.LogAggregator" id="logger"/>
+</beans>

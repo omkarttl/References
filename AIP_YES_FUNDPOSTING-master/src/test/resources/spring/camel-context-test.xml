@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:cxf="http://camel.apache.org/schema/cxf"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd">
+    <cxf:cxfEndpoint address="{{sap.custval.endpoint}}"
+        endpointName="ZFIRFC_BANK_ECOLLECTION_CITI" id="sapEndpoint" wsdlURL="{{custval.destWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <cxf:cxfEndpoint address="{{sap.docpost.endpoint}}"
+        endpointName="ZFIRFC_BANK_ECOLLECTION_CITI" id="sapEndpoint" wsdlURL="{{docpost.destWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <camelContext id="camelContext-9bdc7d83-72e4-45dd-9db1-eaf80025b93c"
+        streamCache="true" xmlns="http://camel.apache.org/schema/spring" xmlns:n0="urn:sap-com:document:sap:rfc:functions">
+        <propertyPlaceholder id="properties" location="application.properties"/>
+        <dataFormats>
+            <jacksonxml id="jack" unmarshalTypeName="org.tml.esb.CustValidationResponse"/>
+            <json id="js" library="Jackson" unmarshalTypeName="org.tml.esb.CustValidation"/>
+        </dataFormats>
+        <restConfiguration apiContextPath="docs" component="servlet" contextPath="/api">
+            <apiProperty key="schemes" value="{{swagger.schemes}}"/>
+            <apiProperty key="host" value="{{swagger.host}}"/>
+            <apiProperty key="base.path" value="/"/>
+            <apiProperty key="api.title" value="{{swagger.api.title}}"/>
+            <apiProperty key="api.description" value="{{swagger.api.desc}}"/>
+            <apiProperty key="api.contact.name" value="{{swagger.api.contact}}"/>
+        </restConfiguration>
+        <rest id="rest-06039eae-5f06-4e8f-89d8-370927e9bd70">
+            <post consumes="application/json"
+                id="post-49fd2030-a421-472e-8164-ca4b9ecb3ce6"
+                produces="application/json"
+                type="org.tml.esb.CustValidation" uri="/custValidation">
+                <description>This API validates the customer</description>
+                <param name="body" required="true" type="body"/>
+                <responseMessage code="200" message="Success"/>
+                <responseMessage code="400" message="Bad Request"/>
+                <responseMessage code="500" message="Internal Server Error"/>
+                <to uri="direct:restYesCustVal"/>
+            </post>
+            <post consumes="application/json"
+                produces="application/json"
+                type="org.tml.esb.DocPosting" uri="/fundPosting">
+                <description>This API validates the customer</description>
+                <param name="body" required="true" type="body"/>
+                <responseMessage code="200" message="Success"/>
+                <responseMessage code="400" message="Bad Request"/>
+                <responseMessage code="500" message="Internal Server Error"/>
+                <to uri="direct:restYesDocPost"/>
+            </post>
+        </rest>
+        <route id="_route3" streamCache="true">
+            <from id="_from1" uri="direct:restYesCustVal"/>
+            <bean id="_bean1"
+                method="sourceIp(REQUEST FROM :: **********)" ref="logger"/>
+            <doTry id="_doTry1">
+                <bean id="_bean2"
+                    method="request(*************** Request Received from Yes Bank ***************)" ref="logger"/>
+                <unmarshal id="_unmarshal1" ref="js"/>
+                <marshal id="_marshal1" ref="jack"/>
+                <to id="_to2" uri="xslt:classpath:sapsoapreq.xslt"/>
+                <bean id="_bean3"
+                    method="request(*************** Request Sent to SAP ***************)" ref="logger"/>
+                <setHeader headerName="Authorization" id="_setHeader1">
+                    <constant>Basic {{sap.endpoint.token}}</constant>
+                </setHeader>
+                <to id="_to1" uri="mock:cxf:bean:sapEndpoint"/>
+                <bean id="_bean4"
+                    method="response(*************** Response from SAP ***************)" ref="logger"/>
+                <setBody id="_setBody1">
+                    <xpath>//n0:ZFIRFC_CUSTOMER_VALIDATIONResponse</xpath>
+                </setBody>
+                <log id="_log1" message="Body=${body}"/>
+                <unmarshal id="_unmarshal2" ref="jack"/>
+                <marshal id="_marshal2" ref="js"/>
+                <log id="_log2" message="Body=${body}"/>
+                <bean id="_bean4"
+                    method="response(*************** Response sent to Yes ***************)" ref="logger"/>
+                <doCatch id="_doCatch1">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <setBody id="_setBody5">
+                        <simple>{"error":"Exception Occurred while calling SAP"}</simple>
+                    </setBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader12">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log9" message="Exception :: ${exception.stacktrace}"/>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>
+                    <setBody id="_setBody6">
+                        <simple>{"error":"Exception Occurred"}</simple>
+                    </setBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader13">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log10" message="Exception :: ${exception.stacktrace}"/>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+    <bean
+        class="org.apache.camel.component.servlet.CamelHttpTransportServlet" id="camelHttpTransportServlet"/>
+    <bean
+        class="org.springframework.boot.web.servlet.ServletRegistrationBean" id="servlet">
+        <property name="name" value="CamelServlet"/>
+        <property name="servlet" ref="camelHttpTransportServlet"/>
+        <property name="urlMappings" value="/api/*"/>
+    </bean>
+  <!--   <bean class="org.tml.esb.ResponseProcessor" id="custValRes"/> -->
+    <bean class="org.tml.esb.LogAggregator" id="logger"/>
+</beans>

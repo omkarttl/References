@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions targetNamespace="urn:sap-com:document:sap:soap:functions:mc-style"
+	xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsoap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+	xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"
+	xmlns:tns="urn:sap-com:document:sap:soap:functions:mc-style" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+	xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+	xmlns:n1="urn:sap-com:document:sap:rfc:functions">
+	<wsdl:documentation>
+		<sidl:sidl xmlns:sidl="http://www.sap.com/2007/03/sidl" />
+	</wsdl:documentation>
+	<!-- <wsp:UsingPolicy wsdl:required="true" />
+	<wsp:Policy wsu:Id="BN__ZSDRFC_AMC_CLAIM_GENERATION">
+		<wsp:ExactlyOne>
+			<wsp:All>
+				<sapattahnd:Enabled xmlns:sapattahnd="http://www.sap.com/710/features/attachment/">false
+				</sapattahnd:Enabled>
+				<saptrnbnd:OptimizedMimeSerialization
+					xmlns:saptrnbnd="http://schemas.xmlsoap.org/ws/2004/09/policy/optimizedmimeserialization"
+					wsp:Optional="true" />
+				<wsaw:UsingAddressing xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+					wsp:Optional="true" />
+				<wsp:All xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
+					<sp:TransportBinding
+						xmlns:sp="http://docs.oasis-open.org/ws-sx/ws-securitypolicy/200702"
+						xmlns:sapsp="http://www.sap.com/webas/630/soap/features/security/policy"
+						xmlns:wsa="http://www.w3.org/2005/08/addressing" xmlns:wst="http://docs.oasis-open.org/ws-sx/ws-trust/200512"
+						xmlns:wsu="http://schemas.xmlsoap.org/ws/2002/07/utility"
+						xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex">
+						<wsp:Policy>
+							<sp:TransportToken>
+								<wsp:Policy>
+									<sp:HttpsToken>
+										<wsp:Policy>
+											<sp:HttpBasicAuthentication />
+										</wsp:Policy>
+									</sp:HttpsToken>
+								</wsp:Policy>
+							</sp:TransportToken>
+							<sp:AlgorithmSuite>
+								<wsp:Policy>
+									<sp:Basic128Rsa15 />
+								</wsp:Policy>
+							</sp:AlgorithmSuite>
+							<sp:Layout>
+								<wsp:Policy>
+									<sp:Strict />
+								</wsp:Policy>
+							</sp:Layout>
+						</wsp:Policy>
+					</sp:TransportBinding>
+				</wsp:All>
+			</wsp:All>
+			<wsp:All>
+				<sapattahnd:Enabled xmlns:sapattahnd="http://www.sap.com/710/features/attachment/">false
+				</sapattahnd:Enabled>
+				<saptrnbnd:OptimizedXMLTransfer
+					uri="http://xml.sap.com/2006/11/esi/esp/binxml" xmlns:saptrnbnd="http://www.sap.com/webas/710/soap/features/transportbinding/"
+					wsp:Optional="true" />
+				<wsaw:UsingAddressing xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+					wsp:Optional="true" />
+				<wsp:All xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
+					<sp:TransportBinding
+						xmlns:sp="http://docs.oasis-open.org/ws-sx/ws-securitypolicy/200702"
+						xmlns:sapsp="http://www.sap.com/webas/630/soap/features/security/policy"
+						xmlns:wsa="http://www.w3.org/2005/08/addressing" xmlns:wst="http://docs.oasis-open.org/ws-sx/ws-trust/200512"
+						xmlns:wsu="http://schemas.xmlsoap.org/ws/2002/07/utility"
+						xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex">
+						<wsp:Policy>
+							<sp:TransportToken>
+								<wsp:Policy>
+									<sp:HttpsToken>
+										<wsp:Policy>
+											<sp:HttpBasicAuthentication />
+										</wsp:Policy>
+									</sp:HttpsToken>
+								</wsp:Policy>
+							</sp:TransportToken>
+							<sp:AlgorithmSuite>
+								<wsp:Policy>
+									<sp:Basic128Rsa15 />
+								</wsp:Policy>
+							</sp:AlgorithmSuite>
+							<sp:Layout>
+								<wsp:Policy>
+									<sp:Strict />
+								</wsp:Policy>
+							</sp:Layout>
+						</wsp:Policy>
+					</sp:TransportBinding>
+				</wsp:All>
+			</wsp:All>
+		</wsp:ExactlyOne>
+	</wsp:Policy>
+	<wsp:Policy wsu:Id="BN__ZSDRFC_AMC_CLAIM_GENERATION_soap12">
+		<wsp:ExactlyOne>
+			<wsp:All>
+				<sapattahnd:Enabled xmlns:sapattahnd="http://www.sap.com/710/features/attachment/">false
+				</sapattahnd:Enabled>
+				<saptrnbnd:OptimizedMimeSerialization
+					xmlns:saptrnbnd="http://schemas.xmlsoap.org/ws/2004/09/policy/optimizedmimeserialization"
+					wsp:Optional="true" />
+				<wsaw:UsingAddressing xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+					wsp:Optional="true" />
+				<wsp:All xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
+					<sp:TransportBinding
+						xmlns:sp="http://docs.oasis-open.org/ws-sx/ws-securitypolicy/200702"
+						xmlns:sapsp="http://www.sap.com/webas/630/soap/features/security/policy"
+						xmlns:wsa="http://www.w3.org/2005/08/addressing" xmlns:wst="http://docs.oasis-open.org/ws-sx/ws-trust/200512"
+						xmlns:wsu="http://schemas.xmlsoap.org/ws/2002/07/utility"
+						xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex">
+						<wsp:Policy>
+							<sp:TransportToken>
+								<wsp:Policy>
+									<sp:HttpsToken>
+										<wsp:Policy>
+											<sp:HttpBasicAuthentication />
+										</wsp:Policy>
+									</sp:HttpsToken>
+								</wsp:Policy>
+							</sp:TransportToken>
+							<sp:AlgorithmSuite>
+								<wsp:Policy>
+									<sp:Basic128Rsa15 />
+								</wsp:Policy>
+							</sp:AlgorithmSuite>
+							<sp:Layout>
+								<wsp:Policy>
+									<sp:Strict />
+								</wsp:Policy>
+							</sp:Layout>
+						</wsp:Policy>
+					</sp:TransportBinding>
+				</wsp:All>
+			</wsp:All>
+			<wsp:All>
+				<sapattahnd:Enabled xmlns:sapattahnd="http://www.sap.com/710/features/attachment/">false
+				</sapattahnd:Enabled>
+				<saptrnbnd:OptimizedXMLTransfer
+					uri="http://xml.sap.com/2006/11/esi/esp/binxml" xmlns:saptrnbnd="http://www.sap.com/webas/710/soap/features/transportbinding/"
+					wsp:Optional="true" />
+				<wsaw:UsingAddressing xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+					wsp:Optional="true" />
+				<wsp:All xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
+					<sp:TransportBinding
+						xmlns:sp="http://docs.oasis-open.org/ws-sx/ws-securitypolicy/200702"
+						xmlns:sapsp="http://www.sap.com/webas/630/soap/features/security/policy"
+						xmlns:wsa="http://www.w3.org/2005/08/addressing" xmlns:wst="http://docs.oasis-open.org/ws-sx/ws-trust/200512"
+						xmlns:wsu="http://schemas.xmlsoap.org/ws/2002/07/utility"
+						xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex">
+						<wsp:Policy>
+							<sp:TransportToken>
+								<wsp:Policy>
+									<sp:HttpsToken>
+										<wsp:Policy>
+											<sp:HttpBasicAuthentication />
+										</wsp:Policy>
+									</sp:HttpsToken>
+								</wsp:Policy>
+							</sp:TransportToken>
+							<sp:AlgorithmSuite>
+								<wsp:Policy>
+									<sp:Basic128Rsa15 />
+								</wsp:Policy>
+							</sp:AlgorithmSuite>
+							<sp:Layout>
+								<wsp:Policy>
+									<sp:Strict />
+								</wsp:Policy>
+							</sp:Layout>
+						</wsp:Policy>
+					</sp:TransportBinding>
+				</wsp:All>
+			</wsp:All>
+		</wsp:ExactlyOne>
+	</wsp:Policy>
+	<wsp:Policy wsu:Id="IF__ZSDRFC_AMC_CLAIM_GENERATION">
+		<wsp:ExactlyOne>
+			<wsp:All>
+				<sapsession:Session
+					xmlns:sapsession="http://www.sap.com/webas/630/soap/features/session/">
+					<sapsession:enableSession>false</sapsession:enableSession>
+				</sapsession:Session>
+				<sapcentraladmin:CentralAdministration
+					xmlns:sapcentraladmin="http://www.sap.com/webas/700/soap/features/CentralAdministration/"
+					wsp:Optional="true">
+					<sapcentraladmin:BusinessApplicationID>4F17462940F800A4E1008000AC18066C
+					</sapcentraladmin:BusinessApplicationID>
+				</sapcentraladmin:CentralAdministration>
+			</wsp:All>
+		</wsp:ExactlyOne>
+	</wsp:Policy>
+	<wsp:Policy wsu:Id="OP__ZsdrfcAmcClaimGeneration">
+		<wsp:ExactlyOne>
+			<wsp:All>
+				<saptrhnw05:required
+					xmlns:saptrhnw05="http://www.sap.com/NW05/soap/features/transaction/">no</saptrhnw05:required>
+				<sapcomhnd:enableCommit
+					xmlns:sapcomhnd="http://www.sap.com/NW05/soap/features/commit/">false</sapcomhnd:enableCommit>
+				<sapblock:enableBlocking
+					xmlns:sapblock="http://www.sap.com/NW05/soap/features/blocking/">true</sapblock:enableBlocking>
+				<saprmnw05:enableWSRM xmlns:saprmnw05="http://www.sap.com/NW05/soap/features/wsrm/">false
+				</saprmnw05:enableWSRM>
+			</wsp:All>
+		</wsp:ExactlyOne>
+	</wsp:Policy>-->
+	<wsdl:types>
+		<xsd:schema attributeFormDefault="qualified"
+			targetNamespace="urn:sap-com:document:sap:rfc:functions">
+			<xsd:simpleType name="char1">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="1" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char10">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="10" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char16">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="16" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char18">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="18" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char180">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="180" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char2">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="2" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char20">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="20" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char220">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="220" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char30">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="30" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char32">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="32" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char50">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="50" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char80">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="80" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="clnt3">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="3" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="curr15.2">
+				<xsd:restriction base="xsd:decimal">
+					<xsd:totalDigits value="15" />
+					<xsd:fractionDigits value="2" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="date10">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="10" />
+					<xsd:pattern value="\d\d\d\d-\d\d-\d\d" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="numeric3">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="3" />
+					<xsd:pattern value="\d*" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="numeric4">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="4" />
+					<xsd:pattern value="\d*" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="numeric6">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="6" />
+					<xsd:pattern value="\d*" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="quantum15.3">
+				<xsd:restriction base="xsd:decimal">
+					<xsd:totalDigits value="15" />
+					<xsd:fractionDigits value="3" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="unit3">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="3" />
+				</xsd:restriction>
+			</xsd:simpleType>
+		</xsd:schema>
+		<xsd:schema attributeFormDefault="qualified"
+			targetNamespace="urn:sap-com:document:sap:soap:functions:mc-style"
+			xmlns:n0="urn:sap-com:document:sap:rfc:functions">
+			<xsd:import namespace="urn:sap-com:document:sap:rfc:functions" />
+			<xsd:simpleType name="char16">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="16" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char60">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="60" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="char64">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="64" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="curr11.2">
+				<xsd:restriction base="xsd:decimal">
+					<xsd:totalDigits value="11" />
+					<xsd:fractionDigits value="2" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="curr13.2">
+				<xsd:restriction base="xsd:decimal">
+					<xsd:totalDigits value="13" />
+					<xsd:fractionDigits value="2" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="date10">
+				<xsd:restriction base="xsd:string">
+					<xsd:maxLength value="10" />
+					<xsd:pattern value="\d\d\d\d-\d\d-\d\d" />
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:complexType name="Bapiret2">
+				<xsd:sequence>
+					<xsd:element name="Type" type="n0:char1" />
+					<xsd:element name="Id" type="n0:char20" />
+					<xsd:element name="Number" type="n0:numeric3" />
+					<xsd:element name="Message" type="n0:char220" />
+					<xsd:element name="LogNo" type="n0:char20" />
+					<xsd:element name="LogMsgNo" type="n0:numeric6" />
+					<xsd:element name="MessageV1" type="n0:char50" />
+					<xsd:element name="MessageV2" type="n0:char50" />
+					<xsd:element name="MessageV3" type="n0:char50" />
+					<xsd:element name="MessageV4" type="n0:char50" />
+					<xsd:element name="Parameter" type="n0:char32" />
+					<xsd:element name="Row" type="xsd:int" />
+					<xsd:element name="Field" type="n0:char30" />
+					<xsd:element name="System" type="n0:char10" />
+				</xsd:sequence>
+			</xsd:complexType>
+			<xsd:complexType name="ZstAmcClmDtl">
+				<xsd:sequence>
+					<xsd:element name="Mandt" type="n0:clnt3" />
+					<xsd:element name="ClaimNo" type="n0:char10" />
+					<xsd:element name="Item" type="xsd:short" />
+					<xsd:element name="Mjahr" type="n0:numeric4" />
+					<xsd:element name="ItemInd" type="n0:char1" />
+					<xsd:element name="ItemCode" type="n0:char18" />
+					<xsd:element name="ItemQty" type="xsd:int" />
+					<xsd:element name="ItemUnit" type="n0:unit3" />
+					<xsd:element name="MatCat" type="n0:char1" />
+					<xsd:element name="Qty" type="n0:quantum15.3" />
+					<xsd:element name="Discount" type="n0:curr15.2" />
+					<xsd:element name="Rate" type="n0:curr15.2" />
+					<xsd:element name="Zamount" type="n0:curr15.2" />
+					<xsd:element name="Status" type="n0:char2" />
+					<xsd:element name="RejReason" type="n0:char2" />
+					<xsd:element name="Message" type="n0:char80" />
+					<xsd:element name="RejComment" type="n0:char180" />
+					<xsd:element name="LabourAmtCrm" type="n0:curr15.2" />
+					<xsd:element name="MaterialAmtCrm" type="n0:curr15.2" />
+					<xsd:element name="LubChargeCrm" type="n0:curr15.2" />
+					<xsd:element name="SplChargeCrm" type="n0:curr15.2" />
+					<xsd:element name="TotalChargeCrm" type="n0:curr15.2" />
+					<xsd:element name="HsnSac" type="tns:char16" />
+					<xsd:element name="JoigRate" type="tns:curr11.2" />
+					<xsd:element name="JoigVal" type="tns:curr13.2" />
+					<xsd:element name="JocgRate" type="tns:curr11.2" />
+					<xsd:element name="JocgVal" type="tns:curr13.2" />
+					<xsd:element name="JosgRate" type="tns:curr11.2" />
+					<xsd:element name="JosgVal" type="tns:curr13.2" />
+					<xsd:element name="JougRate" type="tns:curr11.2" />
+					<xsd:element name="JougVal" type="tns:curr13.2" />
+				</xsd:sequence>
+			</xsd:complexType>
+			<xsd:complexType name="TableOfBapiret2">
+				<xsd:sequence>
+					<xsd:element name="item" type="tns:Bapiret2" minOccurs="0"
+						maxOccurs="unbounded" />
+				</xsd:sequence>
+			</xsd:complexType>
+			<xsd:complexType name="TableOfZstAmcClmDtl">
+				<xsd:sequence>
+					<xsd:element name="item" type="tns:ZstAmcClmDtl"
+						minOccurs="0" maxOccurs="unbounded" />
+				</xsd:sequence>
+			</xsd:complexType>
+			<xsd:element name="ZsdrfcAmcClaimGeneration">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="ChassiNo" type="n0:char18" />
+						<xsd:element name="ChassisPl" type="tns:char60" />
+						<xsd:element name="ClaimItem" type="tns:TableOfZstAmcClmDtl" />
+						<xsd:element name="ClaimType" type="n0:char1" />
+						<xsd:element name="ContractAndItem" type="n0:char16" />
+						<xsd:element name="ContractNo" type="n0:char10" />
+						<xsd:element name="CrmClaimNo" type="n0:char50" />
+						<xsd:element name="CrmSaleDate" type="tns:date10" />
+						<xsd:element name="DealerCode" type="n0:char10" />
+						<xsd:element name="JobCardDate" type="n0:date10" />
+						<xsd:element name="JobCardNo" type="n0:char30" />
+						<xsd:element name="JobClosDate" type="n0:date10" />
+						<xsd:element name="JobClosDateI" type="n0:date10" />
+						<xsd:element name="KmRead" type="xsd:int" />
+						<xsd:element name="LabourAmtCrm" type="n0:curr15.2" />
+						<xsd:element name="LubChargeCrm" type="n0:curr15.2" />
+						<xsd:element name="MaterialAmtCrm" type="n0:curr15.2" />
+						<xsd:element name="Return" type="tns:TableOfBapiret2" />
+						<xsd:element name="SaveData" type="n0:char1" />
+						<xsd:element name="SplChargeCrm" type="n0:curr15.2" />
+						<xsd:element name="TotalChargeCrm" type="n0:curr15.2" />
+						<xsd:element name="ZauthNo" type="tns:char64"
+							minOccurs="0" />
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+			<xsd:element name="ZsdrfcAmcClaimGenerationResponse">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="ClaimItem" type="tns:TableOfZstAmcClmDtl" />
+						<xsd:element name="ClaimNo" type="n0:char10" />
+						<xsd:element name="Return" type="tns:TableOfBapiret2" />
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:schema>
+	</wsdl:types>
+	<wsdl:message name="ZsdrfcAmcClaimGeneration">
+		<wsdl:part name="parameters" element="tns:ZsdrfcAmcClaimGeneration" />
+	</wsdl:message>
+	<wsdl:message name="ZsdrfcAmcClaimGenerationResponse">
+		<wsdl:part name="parameter" element="tns:ZsdrfcAmcClaimGenerationResponse" />
+	</wsdl:message>
+	<wsdl:portType name="ZSDRFC_AMC_CLAIM_GENERATION">
+		<wsdl:documentation>
+			<sapdoc:sapdoc xmlns:sapdoc="urn:sap:esi:documentation">
+				<sapdoc:docitem
+					docURL="http://tmleccqa.tmindia.tatamotors.com:8000/sap/bc/esdt/docu/sd_text?sap-client=500&amp;sd_name=ZSDRFC_AMC_CLAIM_GENERATION" />
+			</sapdoc:sapdoc>
+		</wsdl:documentation>
+		<!--  <wsp:Policy>
+			<wsp:PolicyReference URI="#IF__ZSDRFC_AMC_CLAIM_GENERATION" />
+		</wsp:Policy>-->
+		<wsdl:operation name="ZsdrfcAmcClaimGeneration">
+			<!--  <wsp:Policy>
+				<wsp:PolicyReference URI="#OP__ZsdrfcAmcClaimGeneration" />
+			</wsp:Policy>-->
+			<wsdl:input message="tns:ZsdrfcAmcClaimGeneration" />
+			<wsdl:output message="tns:ZsdrfcAmcClaimGenerationResponse" />
+		</wsdl:operation>
+	</wsdl:portType>
+	<wsdl:binding name="ZSDRFC_AMC_CLAIM_GENERATION" type="tns:ZSDRFC_AMC_CLAIM_GENERATION">
+		<!--  <wsp:Policy>
+			<wsp:PolicyReference URI="#BN__ZSDRFC_AMC_CLAIM_GENERATION" />
+		</wsp:Policy>-->
+		<soap:binding transport="http://schemas.xmlsoap.org/soap/http"
+			style="document" />
+		<wsdl:operation name="ZsdrfcAmcClaimGeneration">
+			<soap:operation
+				soapAction="urn:sap-com:document:sap:soap:functions:mc-style:ZSDRFC_AMC_CLAIM_GENERATION:ZsdrfcAmcClaimGenerationRequest"
+				style="document" />
+			<wsdl:input>
+				<soap:body use="literal" />
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal" />
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:binding name="ZSDRFC_AMC_CLAIM_GENERATION_soap12"
+		type="tns:ZSDRFC_AMC_CLAIM_GENERATION">
+		<!--  <wsp:Policy>
+			<wsp:PolicyReference URI="#BN__ZSDRFC_AMC_CLAIM_GENERATION_soap12" />
+		</wsp:Policy>-->
+		<wsoap12:binding transport="http://schemas.xmlsoap.org/soap/http"
+			style="document" />
+		<wsdl:operation name="ZsdrfcAmcClaimGeneration">
+			<wsoap12:operation
+				soapAction="urn:sap-com:document:sap:soap:functions:mc-style:ZSDRFC_AMC_CLAIM_GENERATION:ZsdrfcAmcClaimGenerationRequest"
+				style="document" />
+			<wsdl:input>
+				<wsoap12:body use="literal" />
+			</wsdl:input>
+			<wsdl:output>
+				<wsoap12:body use="literal" />
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="ZSDRFC_AMC_CLAIM_GENERATION">
+		<wsdl:port name="ZSDRFC_AMC_CLAIM_GENERATION" binding="tns:ZSDRFC_AMC_CLAIM_GENERATION">
+			<soap:address
+				location="http://tmleccqa.tmindia.tatamotors.com:8000/sap/bc/srt/rfc/sap/zsdrfc_amc_claim_generation/500/zsdrfc_amc_claim_generation/zsdrfc_amc_claim_generation" />
+		</wsdl:port>
+		<!-- <wsdl:port name="ZSDRFC_AMC_CLAIM_GENERATION_soap12"
+			binding="tns:ZSDRFC_AMC_CLAIM_GENERATION_soap12">
+			<wsoap12:address
+				location="http://tmleccqa.tmindia.tatamotors.com:8000/sap/bc/srt/rfc/sap/zsdrfc_amc_claim_generation/500/zsdrfc_amc_claim_generation/zsdrfc_amc_claim_generation" />
+		</wsdl:port> -->
+	</wsdl:service>
+</wsdl:definitions>

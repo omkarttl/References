@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:cxf="http://camel.apache.org/schema/cxf"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd">
+    <bean
+        class="org.apache.camel.component.servlet.CamelHttpTransportServlet" id="camelHttpTransportServlet"/>
+    <bean
+        class="org.springframework.boot.web.servlet.ServletRegistrationBean" id="servlet">
+        <property name="name" value="CamelServlet"/>
+        <property name="servlet" ref="camelHttpTransportServlet"/>
+        <property name="urlMappings" value="/api/*"/>
+    </bean>
+    <bean class="org.tml.esb.SapRequestProcessor" id="processor"/>
+    <bean class="org.tml.esb.SapResponseProcessor" id="processorResp"/>
+    <bean class="org.tml.esb.LogAggregator" id="logger"/>
+    <cxf:cxfEndpoint address="{{sap.endpoint}}"
+        endpointName="ZFIRFC_BANK_ECOLLECTION_CITI" id="sapEndpoint" wsdlURL="{{destWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <camelContext id="_tmlHDFC" streamCache="true"
+        xmlns="http://camel.apache.org/schema/spring"
+        xmlns:env="http://www.w3.org/2003/05/soap-envelope"
+        xmlns:n0="urn:sap-com:document:sap:rfc:functions"
+        xmlns:soap="http://www.w3.org/2003/05/soap-envelope"
+        xmlns:soap-env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:sap-com:document:sap:rfc:functions">
+        <dataFormats>
+            <json id="js" library="Jackson" unmarshalTypeName="org.tml.esb.ItemObj"/>
+            <jacksonxml id="jack" unmarshalTypeName="org.tml.esb.SapResponse"/>
+        </dataFormats>
+        <restConfiguration apiContextPath="docs" component="servlet" contextPath="/api">
+            <apiProperty key="schemes" value="{{swagger.schemes}}"/>
+            <apiProperty key="host" value="{{swagger.host}}"/>
+            <apiProperty key="base.path" value="/api"/>
+            <apiProperty key="api.title" value="{{swagger.api.title}}"/>
+            <apiProperty key="api.description" value="{{swagger.api.desc}}"/>
+            <apiProperty key="api.contact.name" value="{{swagger.api.contact}}"/>
+        </restConfiguration>
+        <rest id="rest-06039eae-5f06-4e8f-89d8-370927e9bd70">
+            <post consumes="application/json"
+                id="post-49fd2030-a421-472e-8164-ca4b9ecb3ce6"
+                produces="application/json" type="org.tml.esb.ItemObj" uri="/fundPosting">
+                <description>TML HDFC Banking Use Case</description>
+                <param name="user_key" required="true" type="header"/>
+                <param name="body" required="true" type="body"/>
+                <responseMessage code="200" message="Success"/>
+                <responseMessage code="400" message="Bad Request"/>
+                <responseMessage code="500" message="Internal Server Error"/>
+                <to uri="direct:restHdfc"/>
+            </post>
+        </rest>
+        <route id="_rT1-HDFC_Tml" streamCache="true">
+            <from id="_from1" uri="direct:restHdfc"/>
+            <bean id="_bean1"
+                method="sourceIp(REQUEST FROM :: **********)" ref="logger"/>
+            <doTry id="_doTry1">
+                <bean id="_bean2"
+                    method="request(*************** Request Received from HDFC Bank ***************)" ref="logger"/>
+                <unmarshal id="_unmarshal1" ref="js"/>
+                <process id="_process1" ref="processor"/>
+                <marshal id="_marshal1" ref="jack"/>
+                <to id="_to2" uri="xslt:classpath:sapsoapreq.xslt"/>
+                <bean id="_bean3"
+                    method="request(*************** Request Sent to SAP ***************)" ref="logger"/>
+                <setHeader headerName="Authorization" id="_setHeader1">
+                    <constant>Basic {{sap.endpoint.token}}</constant>
+                </setHeader>
+                <to id="_to1" uri="cxf:bean:sapEndpoint?defaultOperationName=ZFIRFC_BANK_ECOLLECTION_CITI"/>
+                <bean id="_bean4"
+                    method="response(*************** Response from SAP ***************)" ref="logger"/>
+                <setBody id="_setBody2">
+                    <xpath>//n0:ZFIRFC_BANK_ECOLLECTION_CITIResponse/I_ZFI_BANK_ECOLLECTION_CITI/item</xpath>
+                </setBody>
+                <unmarshal id="_unmarshal2" ref="jack"/>
+                <process id="_process2" ref="processorResp"/>
+                <marshal id="_marshal2" ref="js"/>
+                <bean id="_bean4"
+                    method="response(*************** Response sent to HDFC ***************)" ref="logger"/>
+                <doCatch id="_doCatch1">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <setBody id="_setBody5">
+                        <simple>{"error":"Exception Occurred while calling SAP"}</simple>
+                    </setBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader12">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log9" message="Exception :: ${exception.stacktrace}"/>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>
+                    <setBody id="_setBody6">
+                        <simple>{"error":"Exception Occurred"}</simple>
+                    </setBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader13">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log10" message="Exception :: ${exception.stacktrace}"/>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+</beans>

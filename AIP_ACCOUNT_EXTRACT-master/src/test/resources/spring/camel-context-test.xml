@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:cxf="http://camel.apache.org/schema/cxf"
+	xmlns:p="http://cxf.apache.org/policy"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd">
+	<cxf:cxfEndpoint
+		address="http://0.0.0.0:8085/accountExtract"
+		id="AccountExtractEndpoint" serviceClass="org.tml.esb.AccountExtract">
+		<cxf:properties>
+			<entry key="dataFormat" value="MESSAGE" />
+		</cxf:properties>
+	</cxf:cxfEndpoint>
+	<bean
+		class="org.apache.camel.component.servlet.CamelHttpTransportServlet"
+		id="camelHttpTransportServlet" />
+	<bean
+		class="org.springframework.boot.web.servlet.ServletRegistrationBean"
+		id="servlet">
+		<property name="name" value="CamelServlet" />
+		<property name="servlet" ref="camelHttpTransportServlet" />
+		<property name="urlMappings" value="/api/*" />
+	</bean>
+	<!-- <bean class="org.apache.camel.component.sql.SqlComponent" id="sqlComponent"> 
+		<property name="dataSource" ref="oracle-ds" /> </bean> <bean class="org.springframework.jdbc.datasource.DriverManagerDataSource" 
+		id="oracle-ds"> <property name="driverClassName" value="${jdbc.driverClassName}" 
+		/> <property name="url" value="${jdbc.url}" /> <property name="username" 
+		value="${jdbc.username}" /> <property name="password" value="${jdbc.password}" 
+		/> </bean> -->
+	<bean class="org.tml.esb.ResponseProcessor" id="Response" />
+	<bean class="org.tml.esb.CalculationResponse"
+		id="calculateResponse" />
+	<bean class="org.tml.esb.DateProcessor" id="dateProcessor" />
+	
+	<bean class="org.tml.esb.QueryChecker" id="queryChecker" />
+	
+	<camelContext id="_JDG-AccountExtract" streamCache="true"
+		xmlns="http://camel.apache.org/schema/spring"
+		xmlns:ns="https://tatamotors.com/api/1.0"
+		xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+		<propertyPlaceholder id="properties"
+			location="application.properties" />
+		<dataFormats>
+			<json id="js" include="NON_NULL" library="Jackson"
+				unmarshalTypeName="org.tml.esb.AccountExtractResponse" />
+			<jacksonxml id="jack" include="NON_NULL"
+				unmarshalTypeName="org.tml.esb.AccountExtractResponse" />
+		</dataFormats>
+		<restConfiguration apiContextPath="docs"
+			component="servlet" contextPath="/api">
+			<apiProperty key="schemes" value="{{swagger.schemes}}" />
+			<apiProperty key="host" value="{{swagger.host}}" />
+			<apiProperty key="base.path" value="/api" />
+			<apiProperty key="api.title"
+				value="{{swagger.api.title}}" />
+			<apiProperty key="api.description"
+				value="{{swagger.api.desc}}" />
+			<apiProperty key="api.contact.name"
+				value="{{swagger.api.contact}}" />
+		</restConfiguration>
+		<rest id="rest-d4f089e2-2a80-4eef-af00-9df3a1f0eb0e">
+			<post consumes="application/json"
+				id="post-a130b144-9caa-42ca-a242-ce7d364e64e4"
+				produces="application/json" type="org.tml.esb.RequestModel"
+				uri="/accountExtract">
+				<description>Get an entry from a cache</description>
+				<param name="body" required="true" type="body" />
+				<responseMessage code="200" message="Success" />
+				<responseMessage code="400" message="Bad Request" />
+				<responseMessage code="500"
+					message="Internal Server Error" />
+				<to uri="direct:getAccountDataRest" />
+			</post>
+		</rest>
+		<route id="_getAccountDataSOAP">
+			<from id="_from2" uri="cxf:bean:AccountExtractEndpoint" />
+			<doTry id="_doTry2">
+				<log id="_log25" message="Request received >> ${body}" />
+				<setHeader headerName="invoiceType" id="_setHeader15">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Invoice_Type/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceDate" id="_setHeader20">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Invoice_Date/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceEndDate" id="_setHeader21">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Invoice_End_Date/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceMonth" id="_setHeader22">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Invoice_Month/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceYear" id="_setHeader23">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Invoice_Year/text()</xpath>
+				</setHeader>
+				<setHeader headerName="startDate" id="_setHeader24">
+					<simple resultType="java.lang.String">01-${header.invoiceMonth}-${header.invoiceYear}</simple>
+				</setHeader>
+				<setHeader headerName="status" id="_setHeader25">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Status/text()</xpath>
+				</setHeader>
+				<setHeader headerName="salesOrder" id="_setHeader26">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Salesorder/text()</xpath>
+				</setHeader>
+				<setHeader headerName="chassisNo">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Chassis_No/text()</xpath>
+				</setHeader>
+				<setHeader headerName="divisionCode" id="_setHeader27">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Division_Code/text()</xpath>
+				</setHeader>
+				<setHeader headerName="invoiceNo" id="_setHeader28">
+					<xpath resultType="java.lang.String">//ns:ACCOUNT_EXTRACT_API/item/Invoice_No/text()</xpath>
+				</setHeader>
+				<to id="_to1" uri="direct:checkCombination" />
+				<marshal id="_marshal1" ref="jack" />
+				<log id="_log2" message="Marshalled Body :: ${body}" />
+				<to id="_to3" uri="xslt:AccountExtractResponse.xslt" />
+				<doCatch>
+					<exception>java.sql.SQLException</exception>
+					<log
+						message="SQL Exception Occured :: ********** ${exception.stacktrace}" />
+					<setFaultBody id="_setFaultBody1">
+						<constant>SQL Exception occurred. Please check logs.</constant>
+					</setFaultBody>
+				</doCatch>
+				<doCatch>
+					<exception>java.lang.Exception</exception>
+					<log
+						message="Exception Occured :: ********** ${exception.stacktrace}" />
+					<setFaultBody id="_setFaultBody2">
+						<constant>Exception occurred. Please check logs.</constant>
+					</setFaultBody>
+				</doCatch>
+
+			</doTry>
+		</route>
+		<route id="_getAccountDataREST">
+			<from id="_from1" uri="direct:getAccountDataRest" />
+			<doTry id="_doTry1">
+				<setHeader headerName="invoiceType" id="_setHeader29">
+					<jsonpath>$.invoiceType</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceDate" id="_setHeader1">
+					<jsonpath>$.invoiceDate</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceEndDate" id="_setHeader2">
+					<jsonpath>$.invoiceEndDate</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceMonth" id="_setHeader3">
+					<jsonpath>$.invoiceMonth</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceYear" id="_setHeader4">
+					<jsonpath>$.invoiceYear</jsonpath>
+				</setHeader>
+				<setHeader headerName="startDate" id="_setHeader5">
+					<simple>01-${header.invoiceMonth}-${header.invoiceYear}</simple>
+				</setHeader>
+				<setHeader headerName="status" id="_setHeader6">
+					<jsonpath>$.status</jsonpath>
+				</setHeader>
+				<setHeader headerName="salesOrder" id="_setHeader7">
+					<jsonpath>$.salesOrder</jsonpath>
+				</setHeader>
+				<setHeader headerName="divisionCode" id="_setHeader8">
+					<jsonpath>$.divisionCode</jsonpath>
+				</setHeader>
+				<setHeader headerName="invoiceNo" id="_setHeader9">
+					<jsonpath>$.invoiceNo</jsonpath>
+				</setHeader>
+				<setHeader headerName="chassisNo">
+					<jsonpath>$.chassisNo</jsonpath>
+				</setHeader>
+				<setProperty id="_setProperty1" propertyName="invoiceNo">
+					<simple>${header.invoiceNo}</simple>
+				</setProperty>
+				<setProperty id="_setProperty2"
+					propertyName="divisionCode">
+					<simple>${header.divisionCode}</simple>
+				</setProperty>
+				<setProperty id="_setProperty3"
+					propertyName="invoiceType">
+					<simple>${header.invoiceType}</simple>
+				</setProperty>
+				<to id="_to2" uri="direct:checkCombination" />
+				<!-- <log message="after chk combo ::: ${body}" /> -->
+				<removeHeaders id="_removeHeaders1" pattern="*" />
+				<marshal id="_marshal2" ref="js" />
+				<doCatch id="_doCatch1">
+					<exception>java.sql.SQLException</exception>
+					<log id="_log23"
+						message="SQL Exception Occured :: ********** ${exception.stacktrace}" />
+					<setHeader headerName="Exchange.HTTP_RESPONSE_CODE"
+						id="_setHeader16">
+						<constant>500</constant>
+					</setHeader>
+					<setBody id="_setBody1">
+						<constant>{"error":"SQL Exception occurred. Please check logs."}</constant>
+					</setBody>
+					<setHeader headerName="Content-Type" id="_setHeader17">
+						<simple>application/json</simple>
+					</setHeader>
+				</doCatch>
+				<doCatch id="_doCatch2">
+					<exception>java.lang.Exception</exception>
+					<log id="_log24"
+						message="Exception Occured :: ********** ${exception.stacktrace}" />
+					<setHeader headerName="Exchange.HTTP_RESPONSE_CODE"
+						id="_setHeader18">
+						<constant>500</constant>
+					</setHeader>
+					<setBody id="_setBody2">
+						<constant>{"error":"Exception occurred. Please check logs."}</constant>
+					</setBody>
+					<setHeader headerName="Content-Type" id="_setHeader19">
+						<simple>application/json</simple>
+					</setHeader>
+				</doCatch>
+			</doTry>
+		</route>
+		<route id="_route1">
+			<from id="_from3" uri="direct:checkCombination" />
+			<!-- Check if data is available in DB or JDG with given Month and Year 
+				as first and end date of the month -->
+			<!-- <bean method="getJDGDateData" ref="JdgDateCheck"/> -->
+			<setHeader headerName="JDG_StartDate" id="_setHeader10">
+				<simple>01-May-2019</simple>
+			</setHeader>
+			<setHeader headerName="JDG_EndDate" id="_setHeader11">
+				<simple>31-Mar-2020</simple>
+			</setHeader>
+			<choice id="_choice1">
+				<when id="_when1">
+					<simple>${header.invoiceDate} == '' or ${header.invoiceDate} == null and ${header.invoiceEndDate} == '' or ${header.invoiceEndDate} == null and ${header.status} != ''</simple>
+					<log id="_log1"
+						message="Invoice date and Invoice End dates are NULL ; Process for invoiceMonth and invoiceYear" />
+					<process id="_process1" ref="dateProcessor" />
+					<log id="_log3"
+						message="Start Date :: ${header.startDate} :: End Date :: ${header.invoiceEndDate}" />
+					<setHeader headerName="invoiceDate" id="_setHeader12">
+						<simple>${header.startDate}</simple>
+					</setHeader>
+					<setHeader headerName="dateFlag" id="_setHeader13">
+						<simple>0</simple>
+					</setHeader>
+					<setHeader headerName="dbFlag" id="_setHeader30">
+						<simple>dateStatus</simple>
+					</setHeader>
+				</when>
+				<when id="_when3">
+					<simple>${header.invoiceDate} != '' and ${header.invoiceEndDate} != '' and ${header.status} == '' or ${header.status} == null</simple>
+					<log id="_log8"
+						message="Means invoiceDate, invoice Enddate are not NULL but status is NULL" />
+					<setHeader headerName="dateFlag" id="_setHeader32">
+						<simple>0</simple>
+					</setHeader>
+					<setHeader headerName="dbFlag" id="_setHeader33">
+						<simple>dateFromTo</simple>
+					</setHeader>
+				</when>
+				<when id="_when2">
+					<simple>${header.invoiceEndDate} == '' or ${header.invoiceEndDate} == null and ${header.invoiceMonth} == '' or ${header.invoiceMonth} == null and ${header.invoiceYear} == '' or ${header.invoiceYear} == null and ${header.status} == '' or ${header.status} == null and ${header.invoiceDate} != ''</simple>
+					<log id="_log11"
+						message="invoiceEndDate, invoiceMonth, invoiceYear and status are NULL" />
+					<!-- Processing data for a single Date -->
+					<setHeader headerName="dateFlag" id="_setHeader14">
+						<simple>1</simple>
+					</setHeader>
+					<setHeader headerName="dbFlag" id="_setHeader35">
+						<simple>singleDate</simple>
+					</setHeader>
+				</when>
+				<when id="_when4">
+					<simple>${header.invoiceMonth} == '' or ${header.invoiceMonth} == null and ${header.invoiceYear} == '' or ${header.invoiceYear} == null and ${header.status} != '' and ${header.invoiceEndDate} != ''</simple>
+					<log id="_log9"
+						message="invoiceMnth, invoiceYear are null, but status and invoice end and start dates are  not null " />
+					<setHeader headerName="dateFlag" id="_setHeader37">
+						<simple>0</simple>
+					</setHeader>
+					<setHeader headerName="dbFlag" id="_setHeader38">
+						<simple>dateStatus</simple>
+					</setHeader>
+				</when>
+				<when id="_when5">
+					<simple>${header.invoiceNo} != '' and ${header.invoiceMonth} == '' or ${header.invoiceMonth} == null and ${header.invoiceYear} == '' or ${header.invoiceYear} == null and ${header.invoiceDate} == '' or ${header.invoiceDate} == null and ${header.invoiceEndDate} == '' or ${header.invoiceEndDate} == null </simple>
+					<log id="_log10"
+						message="All date parameters are NULL, Invoice No is NOT NULL" />
+					<setHeader headerName="dbFlag" id="_setHeader40">
+						<simple>invNoData</simple>
+					</setHeader>
+				</when>
+				<when id="_when6">
+					<simple>${header.salesOrder} != '' and ${header.invoiceMonth} == '' or ${header.invoiceMonth} == null and ${header.invoiceYear} == '' or ${header.invoiceYear} == null and ${header.invoiceDate} == '' or ${header.invoiceDate} == null and ${header.invoiceEndDate} == '' or ${header.invoiceEndDate} == null </simple>
+					<log id="_log12"
+						message="All date parameters are NULL, SalesOrder is NOT NULL" />
+					<setHeader headerName="dbFlag" id="_setHeader42">
+						<simple>salesOrdData</simple>
+					</setHeader>
+				</when>
+				<when id="_when7">
+					<simple>${header.chassisNo} != '' and ${header.invoiceMonth} == '' or ${header.invoiceMonth} == null and ${header.invoiceYear} == '' or ${header.invoiceYear} == null and ${header.invoiceDate} == '' or ${header.invoiceDate} == null and ${header.invoiceEndDate} == '' or ${header.invoiceEndDate} == null </simple>
+					<log id="_log13"
+						message="All date parameters are NULL, chassisNo is NOT NULL" />
+					<setHeader headerName="dbFlag" id="_setHeader44">
+						<simple>chassisData</simple>
+					</setHeader>
+				</when>
+			</choice>
+			<log message="dateFlag ::: ${header.dateFlag}" />
+			<!-- To call method Query checker only when we have date parameters in 
+				request body -->
+		
+			<choice id="_choice2">
+				<when id="_when8">
+					<simple>${header.dateFlag} == '0' or ${header.dateFlag} == '1'</simple>
+					<bean id="_bean1" method="queryCheck" ref="queryChecker" />
+					<to uri="mock:check"/>
+					<log id="_log4" message="QueryFlag = ${header.QueryFlag}" />
+					<!-- <to uri="direct:${header.QueryFlag}"/> -->
+					<recipientList id="_recipientList1">
+						<simple>direct:${header.QueryFlag}</simple>
+					</recipientList>
+				</when>
+				<otherwise id="_otherwise1">
+					<to id="_to4" uri="direct:drDB" />
+				</otherwise>
+				<!-- <otherwise> <log message="In otherwise.. Non-Date Scenario.." /> 
+					<to uri="direct:jdg" /> <log message="Response received from JDG :: ${body}" 
+					/> <choice> <when> <simple>${body} == '' or ${body} == null</simple> <to 
+					uri="direct:drDB" /> <log message="Body received from DB :: ${body}" /> </when> 
+					</choice> </otherwise> -->
+			</choice>
+		</route>
+		<route id="_route2">
+			<from id="_from4" uri="direct:jdg" />
+			<doTry>
+				<log id="_log15"
+					message="In jdg Route ...QueryFlag = ${header.QueryFlag} " />
+				<to uri="mock:JDG" />
+				<doCatch>
+					<exception>java.lang.Exception</exception>
+					<setBody>
+						<simple>{"error:"Exception occurred while calling JDG"}</simple>
+					</setBody>
+				</doCatch>
+			</doTry>
+		</route>
+		<route id="_route3">
+			<from id="_from5" uri="direct:drDB" />
+			<log id="_log16"
+				message="In DB Route ... DbFlag = ${header.dbFlag}" />
+			<choice id="_choice3">
+				<when id="_when9">
+					<simple>${header.dbFlag} == 'dateStatus'</simple>
+					<log id="_log17"
+						message="Executing query : selectAccountDataFromToStatus " />
+					<setHeader headerName="CamelSqlQuery" id="_setHeader31">
+						<simple>{{sql.selectAccountDataFromToStatus}}</simple>
+					</setHeader>
+					<log id="_log5" message="Query ::: ${header.CamelSqlQuery}" />
+					<to id="_to5" uri="mock:sqlComponent:${header.CamelSqlQuery}" />
+				</when>
+				<when id="_when10">
+					<simple>${header.dbFlag} == 'dateFromTo'</simple>
+					<log id="_log18"
+						message="Executing query : selectAccountDataFromTo" />
+					<setHeader headerName="CamelSqlQuery" id="_setHeader34">
+						<simple>{{sql.selectAccountDataFromTo}}</simple>
+					</setHeader>
+					<log id="_log6" message="Query ::: ${header.CamelSqlQuery}" />
+					<to id="_to6" uri="mock:sqlComponent:${header.CamelSqlQuery}" />
+				</when>
+				<when id="_when11">
+					<simple>${header.dbFlag} == 'singleDate'</simple>
+					<log id="_log19"
+						message="Executing query : selectAccountDataSingleDate " />
+					<setHeader headerName="CamelSqlQuery" id="_setHeader36">
+						<simple>{{sql.selectAccountDataSingleDate}}</simple>
+					</setHeader>
+					<log id="_log7" message="Query ::: ${header.CamelSqlQuery}" />
+					<to id="_to7" uri="mock:sqlComponent:${header.CamelSqlQuery}" />
+				</when>
+				<when id="_when12">
+					<simple>${header.dbFlag} == 'invNoData'</simple>
+					<log id="_log19"
+						message="Executing query : selectAccountDataInvoiceNo " />
+					<setHeader headerName="CamelSqlQuery" id="_setHeader39">
+						<simple>{{sql.selectAccountDataInvoiceNo}}</simple>
+					</setHeader>
+					<log id="_log14" message="Query ::: ${header.CamelSqlQuery}" />
+					<to id="_to8" uri="mock:sqlComponent:${header.CamelSqlQuery}" />
+					<log id="_log20" message="Body after SQL inv No ::: ${body}" />
+				</when>
+				<when id="_when13">
+					<simple>${header.dbFlag} == 'salesOrdData'</simple>
+					<log id="_log21"
+						message="Executing query : selectAccountDataSalesOrder " />
+					<setHeader headerName="CamelSqlQuery" id="_setHeader41">
+						<simple>{{sql.selectAccountDataSalesOrder}}</simple>
+					</setHeader>
+					<log id="_log26" message="Query ::: ${header.CamelSqlQuery}" />
+					<to id="_to9" uri="mock:sqlComponent:${header.CamelSqlQuery}" />
+				</when>
+				<when id="_when14">
+					<simple>${header.dbFlag} == 'chassisData'</simple>
+					<log id="_log22"
+						message="Executing query : selectAccountDataChasisNo " />
+					<setHeader headerName="CamelSqlQuery" id="_setHeader43">
+						<simple>{{sql.selectAccountDataChasisNo}}</simple>
+					</setHeader>
+					<log id="_log27" message="Query ::: ${header.CamelSqlQuery}" />
+					<to id="_to10" uri="mock:sqlComponent:${header.CamelSqlQuery}" />
+				</when>
+			</choice>
+			<!-- <split id="_split1" streaming="true"> <simple>${body}</simple> <bean 
+				id="_bean2" method="calulateLogic" ref="calculateResponse"/> </split> -->
+
+		</route>
+	</camelContext>
+</beans>

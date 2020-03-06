@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans           http://www.springframework.org/schema/beans/spring-beans.xsd                  http://camel.apache.org/schema/spring                 http://camel.apache.org/schema/spring/camel-spring.xsd">
+	<camelContext id="camel"
+		xmlns="http://camel.apache.org/schema/spring"
+		xmlns:ZMES_NONSR_DATA="http://sap.fusesource.org/rfc/PD8/ZMES_NONSR_DATA"
+		xmlns:ZMES_WELD_DATA="http://sap.fusesource.org/rfc/PD8/ZMES_WELD_DATA">
+		<propertyPlaceholder id="properties"
+			location="application.properties" />
+		<dataFormats>
+			<jacksonxml id="nonsr"
+				unmarshalTypeName="org.tml.esb.NonSrInput" />
+			<jacksonxml id="weld"
+				unmarshalTypeName="org.tml.esb.WeldInput" />
+			<jacksonxml id="marshal" />
+		</dataFormats>
+		<route id="_route1">
+			<from id="_from1" uri="direct:in.mes.dev.queue" />
+			<doTry id="_doTry1">
+				<setProperty propertyName="bodyBkp">
+					<simple>${in.body}</simple>
+				</setProperty>
+				<setHeader headerName="rfcName" id="_setHeader1">
+					<xpath resultType="java.lang.String">//RFC_CALL/@NAME</xpath>
+				</setHeader>
+				<log message="Header:: ${header.rfcName}" />
+				<setHeader headerName="atrKey" id="_setHeader4">
+					<xpath>//RFC_CALL/atr_key/text()</xpath>
+				</setHeader>
+				<recipientList id="_recipientList1">
+					<simple>direct:${header.rfcName}</simple>
+				</recipientList>
+				<doCatch id="_doCatch1">
+					<exception>java.net.SocketTimeoutException</exception>
+					<log id="_log1"
+						message="Exception Occured :: ********************       ${exception.stacktrace}" />
+					<setBody>
+						<simple>${exchangeProperty[bodyBkp]}</simple>
+					</setBody>
+					<to id="_to4"
+						uri="artemis-in:queue:{{inbound.queue}}?jmsObjectFactory=#delayedDeliveryObjectFactory" />
+					<log
+						message="Exception occured. SAP Request sent to Inbound queue." />
+				</doCatch>
+				<!-- <doCatch id="_doCatch2"> <exception>com.sap.conn.jco.JCoException</exception> 
+					<log id="_log3" message="Exception Occured :: ******************** ${exception.stacktrace}"/> 
+					<setBody><simple>${exchangeProperty[bodyBkp]}</simple></setBody> <to id="_to4" 
+					uri="artemis-in:queue:{{inbound.queue}}?jmsObjectFactory=#delayedDeliveryObjectFactory"/> 
+					<log message="Exception occured. SAP Request sent to Inbound queue." /> </doCatch> -->
+				<doCatch id="_doCatch3">
+					<exception>java.lang.Exception</exception>
+					<log id="_log8"
+						message="Exception Occured :: ******************** ${exception.stacktrace}" />
+					<setBody>
+						<simple>${exchangeProperty[bodyBkp]}</simple>
+					</setBody>
+					<to id="_to4"
+						uri="artemis-in:queue:{{inbound.queue}}?jmsObjectFactory=#delayedDeliveryObjectFactory" />
+					<log id="_log8"
+						message="Exception occured. SAP Request sent to Inbound queue." />
+				</doCatch>
+			</doTry>
+		</route>
+		<route id="_route2">
+			<from id="_from2" uri="direct:ZMES_NONSR_DATA" />
+			<bean id="_bean1" method="sourceIp(REQUEST FROM :: **********)"
+				ref="logger" />
+			<bean id="_bean2"
+				method="request(TA NSRL Production Booking from AMQ :: ***********)"
+				ref="logger" />
+
+			<unmarshal id="_unmarshal1" ref="nonsr" />
+			<to id="_to1" uri="mock:bean:getNonSr" />
+			<bean id="_bean3"
+				method="request(TA_NSRL :: SAP Request :: ***********)" ref="logger" />
+			<to id="_to2"
+				uri="mock:sap-srfc-destination:rfcDest:{{sap.nonsr.endpoint}}" />
+			<setBody id="_setBody2">
+				<constant>&lt;?xml version="1.0" encoding="ASCII"?&gt; 
+					&lt;ZMES_NONSR_DATA:Response xmlns:ZMES_NONSR_DATA="http://sap.fusesource.org/rfc/PD8/ZMES_NONSR_DATA" 
+					RET_VAL="DUPLICATE ENTRY"/&gt;</constant>
+			</setBody>
+			<convertBodyTo id="_convertBodyTo1"
+				type="java.lang.String" />
+			<setBody id="_setBody2">
+				<xpath resultType="java.lang.String">//ZMES_NONSR_DATA:Response/@RET_VAL</xpath>
+			</setBody>
+			<to id="_to3" uri="bean:processor" />
+
+			<marshal id="_marshal1" ref="marshal" />
+			<bean id="_bean10"
+				method="response(TA_NSRL :: SAP RESPONSE :: ***********)"
+				ref="logger" />
+			<to id="_to9" uri="artemis-in:queue:{{outbound.queue}}" />
+			<bean id="_bean11"
+				method="response(TA_NSRL :: SAP Response sent to Outbound Queue :: ***********)"
+				ref="logger" />
+		</route>
+		<route id="_route3">
+			<from id="_from1112" uri="direct:ZMES_WELD_DATA" />
+			<bean id="_bean5" method="sourceIp(REQUEST FROM :: **********)"
+				ref="logger" />
+			<bean id="_bean6"
+				method="request(Request for WELD Production Booking from AMQ :: ***********)"
+				ref="logger" />
+			<unmarshal id="_unmarshal2" ref="weld" />
+			<to id="_to5" uri="mock:bean:getWeld" />
+			<bean id="_bean7"
+				method="request(WELD :: SAP Request :: ***********)" ref="logger" />
+			<to id="_to6"
+				uri="mock:sap-srfc-destination:rfcDest:{{sap.weld.endpoint}}" />
+			<setBody>
+				<constant>&lt;?xml version="1.0" encoding="ASCII"?&gt; 
+					&lt;ZMES_WELD_DATA:Response xmlns:ZMES_WELD_DATA="http://sap.fusesource.org/rfc/PD8/ZMES_WELD_DATA" 
+					RET_VAL="DUPLICATE ENTRY"/&gt;</constant>
+			</setBody>
+			<convertBodyTo id="_convertBodyTo2"
+				type="java.lang.String" />
+			<setBody id="_setBody3">
+				<xpath resultType="java.lang.String">//ZMES_WELD_DATA:Response/@RET_VAL</xpath>
+			</setBody>
+			<to id="_to7" uri="bean:processor" />
+			<marshal id="_marshal2" ref="marshal" />
+			<bean id="_bean9"
+				method="response(WELD :: SAP RESPONSE :: ***********)" ref="logger" />
+			<bean id="_bean4"
+				method="response(WELD :: SAP Response sent to Outbound Queue :: ***********)"
+				ref="logger" />
+			<to id="_to8" uri="artemis-in:queue:{{outbound.queue}}" />
+			<bean
+				method="response(TA_NSRL :: SAP Response sent to Outbound Queue :: ***********)"
+				ref="logger" />
+		</route>
+	</camelContext>
+	<bean class="org.tml.esb.CreateSAPRequestNonSR" id="getNonSr" />
+	<bean class="org.tml.esb.CreateSAPRequestWeld" id="getWeld" />
+	<bean class="org.tml.esb.SAPResponse" id="response" />
+	<bean class="org.tml.esb.ProcessorBean" id="processor" />
+	<bean class="org.tml.esb.LogAggregator" id="logger" />
+	<!-- <bean class="org.fusesource.camel.component.sap.SapConnectionConfiguration" 
+		id="sap-configuration"> <property name="destinationDataStore"> <map> <entry 
+		key="rfcDest" value-ref="rfcDestinationData"/> </map> </property> </bean> -->
+	<!-- Configures an Outbound SAP Connection -->
+	<!-- <bean class="org.fusesource.camel.component.sap.model.rfc.impl.DestinationDataImpl" 
+		id="rfcDestinationData"> <property name="ashost" value="${sap.ashost}"/> 
+		<property name="sysnr" value="${sap.sysnr}"/> <property name="client" value="${sap.client}"/> 
+		<property name="user" value="${sap.user}"/> <property name="passwd" value="${sap.passwd}"/> 
+		<property name="lang" value="${sap.lang}"/> </bean> -->
+	<!-- JMS QPid Proton Configuration -->
+	<bean class="org.apache.qpid.jms.JmsConnectionFactory"
+		id="jmsConnectionFactory">
+		<property name="username" value="amq-user" />
+		<property name="password" value="esb@2020" />
+		<property name="remoteURI"
+			value="amqps://broker-amq-headless-amq-np.api.tatamotors.com:443?jms.redeliveryPolicy.maxRedeliveries=6" />
+	</bean>
+	<bean class="org.tml.esb.DelayedDeliveryObjectFactory"
+		id="delayedDeliveryObjectFactory" />
+	<bean class="org.apache.camel.component.sjms2.Sjms2Component"
+		id="artemis-in">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+	</bean>
+</beans>

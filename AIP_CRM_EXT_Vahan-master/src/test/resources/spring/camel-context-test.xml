@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:cxf="http://camel.apache.org/schema/cxf"
+	xmlns:http-conf="http://cxf.apache.org/transports/http/configuration"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="          http://www.springframework.org/schema/beans           http://www.springframework.org/schema/beans/spring-beans.xsd            http://camel.apache.org/schema/cxf           http://camel.apache.org/schema/cxf/camel-cxf.xsd                http://camel.apache.org/schema/spring                 http://camel.apache.org/schema/spring/camel-spring.xsd                http://cxf.apache.org/transports/http/configuration     http://cxf.apache.org/schemas/configuration/http-conf.xsd">
+	<!-- setting up a Camel CXF web-service -->
+	<cxf:cxfEndpoint address="http://0.0.0.0:8085/vahanRegistration"
+		id="vahanRegistration" serviceClass="nic.transport.homologation.web.service.Dataportws"
+		wsdlURL="src/main/resources/esb_vahan.wsdl">
+		<cxf:properties>
+			<entry key="dataFormat" value="MESSAGE" />
+		</cxf:properties>
+	</cxf:cxfEndpoint>
+	
+	<http-conf:conduit name=".*http-conduit">
+		<http-conf:client ReceiveTimeout="90000" />
+	</http-conf:conduit>
+	<camelContext id="camel" streamCache="true"
+		xmlns="http://camel.apache.org/schema/spring"
+		xmlns:ns2="http://service.web.homologation.transport.nic/"
+		xmlns:ser="http://service.web.homologation.transport.nic/">
+		<propertyPlaceholder id="properties"
+			location="application.properties" />
+		<!-- Register Vahan Route -->
+		<route id="vahanRegistration"
+			xmlns="http://camel.apache.org/schema/spring">
+			<from id="_from1" uri="cxf:bean:vahanRegistration" />
+			<doTry id="_doTry1">
+				<setHeader headerName="userId" id="_setHeader1">
+					<xpath>//ser:upload/userId/text()</xpath>
+				</setHeader>
+				<choice id="choice1">
+					<when id="when1">
+						<simple>${header.userId} == ''</simple>
+						<setHeader headerName="userId" id="setHeader1">
+							<constant>matiu1</constant>
+						</setHeader>
+					</when>
+				</choice>
+				<setHeader headerName="transactionId" id="_setHeader2">
+					<xpath>//ser:upload/transactionId/text()</xpath>
+				</setHeader>
+				<choice id="choice2">
+					<when id="when2">
+						<simple>${header.transactionId} == ''</simple>
+						<setHeader headerName="transactionId" id="setHeader2">
+							<constant>123456</constant>
+						</setHeader>
+					</when>
+				</choice>
+				<setHeader headerName="chassisNo" id="_setHeader3">
+					<xpath>//ser:upload/inventoryDetails/chassisNo/text()</xpath>
+				</setHeader>
+				<setHeader headerName="colorCode" id="_setHeader4">
+					<xpath>//ser:upload/inventoryDetails/colorCode/text()</xpath>
+				</setHeader>
+				<setHeader headerName="dealerCode" id="_setHeader5">
+					<xpath>//ser:upload/inventoryDetails/dealerCode/text()</xpath>
+				</setHeader>
+				<setHeader headerName="engineNo" id="_setHeader6">
+					<xpath>//ser:upload/inventoryDetails/engineNo/text()</xpath>
+				</setHeader>
+				<setHeader headerName="featureCode" id="_setHeader7">
+					<xpath>//ser:upload/inventoryDetails/featureCode/text()</xpath>
+				</setHeader>
+				<setHeader headerName="monthYear" id="_setHeader8">
+					<xpath>//ser:upload/inventoryDetails/monthYear/text()</xpath>
+				</setHeader>
+				<setHeader headerName="unique_model_ref_no"
+					id="_setHeader9">
+					<xpath>//ser:upload/inventoryDetails/unique_model_ref_no/text()</xpath>
+				</setHeader>
+				<choice id="choice4">
+					<when id="when3">
+						<simple>${header.chassisNo} == '' || ${header.colorCode} == '' || ${header.dealerCode} == '' || ${header.engineNo} == '' || ${header.featureCode} == '' || ${header.monthYear} == '' || ${header.unique_model_ref_no} == ''</simple>
+						<setBody id="_setBody1">
+                            <constant>
+&lt;S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/"&gt;
+&lt;S:Body&gt;
+&lt;ns2:uploadResponse xmlns:ns2="http://service.web.homologation.transport.nic/"&gt;
+&lt;return&gt;Engine Number, Chassis Color, Manufacturing Date and URN are mandatory fields.&lt;/return&gt;
+&lt;/ns2:uploadResponse&gt;
+&lt;/S:Body&gt;
+&lt;/S:Envelope&gt; </constant>
+                        </setBody>
+					</when>
+					<when id="when4">
+						<simple>${header.engineNo} not regex '^[A-Z0-9.-]{1,30}$'</simple>
+						<setBody id="_setBody2">
+                            <constant>
+&lt;S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/"&gt;
+&lt;S:Body&gt;
+&lt;ns2:uploadResponse xmlns:ns2="http://service.web.homologation.transport.nic/"&gt;
+&lt;return&gt;Engine No. Length must be Max 30 Characters and should not contain space, lowercase alphabets or any special characters(except '.' , '-').&lt;/return&gt;
+&lt;/ns2:uploadResponse&gt;
+&lt;/S:Body&gt;
+&lt;/S:Envelope&gt; </constant>
+                        </setBody>
+					</when>
+					<otherwise id="otherwise1">
+						<to id="_to1" uri="mock:parivahanUpload" />
+						<process id="_process1" ref="customMessage" />
+					</otherwise>
+				</choice>
+				<doCatch id="_doCatch1">
+					<exception>java.net.SocketTimeoutException</exception>
+					<setFaultBody id="_setBody3">
+						<simple>Timeout Exception while calling Parivahan Service.</simple>
+					</setFaultBody>
+				</doCatch>
+				<doCatch id="_doCatch2">
+					<exception>java.lang.Exception</exception>
+					<setFaultBody id="_setBody4">
+						<constant>Error Occurred. Please check Logs.</constant>
+					</setFaultBody>
+				</doCatch>
+			</doTry>
+		</route>
+	</camelContext>
+	<bean class="org.tml.esb.CustomMessage" id="customMessage" />
+</beans>

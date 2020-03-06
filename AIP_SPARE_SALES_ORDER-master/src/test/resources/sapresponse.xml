@@ -1,0 +1,42 @@
+<soap-env:Envelope xmlns:soap-env="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap-env:Header />
+    <soap-env:Body>
+        <n0:ZsdrfcCreateSalesOrderResponse xmlns:n0="urn:sap-com:document:sap:soap:functions:mc-style">
+            <Return>
+                <item>
+                    <Type>E</Type>
+                    <Id>CZ</Id>
+                    <Number>115</Number>
+                    <Message>Sales area 4000 20 4 does not exist</Message>
+                    <LogNo />
+                    <LogMsgNo>000000</LogMsgNo>
+                    <MessageV1>4000</MessageV1>
+                    <MessageV2>20</MessageV2>
+                    <MessageV3>4</MessageV3>
+                    <MessageV4 />
+                    <Parameter>SALES_HEADER_IN</Parameter>
+                    <Row>0</Row>
+                    <Field />
+                    <System>LOGSYS250</System>
+                </item>
+                <item>
+                    <Type>E</Type>
+                    <Id>V4</Id>
+                    <Number>219</Number>
+                    <Message>Sales document was not changed</Message>
+                    <LogNo />
+                    <LogMsgNo>000000</LogMsgNo>
+                    <MessageV1 />
+                    <MessageV2>20</MessageV2>
+                    <MessageV3>4</MessageV3>
+                    <MessageV4 />
+                    <Parameter />
+                    <Row>0</Row>
+                    <Field />
+                    <System>LOGSYS250</System>
+                </item>
+            </Return>
+            <Salesdocument />
+        </n0:ZsdrfcCreateSalesOrderResponse>
+    </soap-env:Body>
+</soap-env:Envelope>

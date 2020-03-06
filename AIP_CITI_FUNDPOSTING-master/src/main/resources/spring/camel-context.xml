@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:cxf="http://camel.apache.org/schema/cxf"
+    xmlns:p="http://cxf.apache.org/policy"
+    xmlns:sec="http://cxf.apache.org/configuration/security"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://cxf.apache.org/policy http://cxf.apache.org/schemas/policy.xsd  http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd        http://camel.apache.org/schema/spring       http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf           http://camel.apache.org/schema/cxf/camel-cxf.xsd http://cxf.apache.org/transports/http/configuration     http://cxf.apache.org/schemas/configuration/http-conf.xsd http://cxf.apache.org/configuration/security http://cxf.apache.org/schemas/configuration/security.xsd">
+    <cxf:cxfEndpoint
+        address="http://{{fuse.endpoint.host}}:{{fuse.endpoint.port}}/fundPosting"
+        id="CitiEndpoint" serviceClass="org.tml.esb.CitiBanking">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <cxf:cxfEndpoint address="{{sap.endpoint}}"
+        endpointName="ZFIRFC_BANK_ECOLLECTION_CITI"
+        id="sapCitiFundPostingEndpoint" wsdlURL="{{destSAPWsdl}}">
+        <cxf:properties>
+            <entry key="dataFormat" value="MESSAGE"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <bean class="org.tml.esb.LogAggregator" id="logger"/>
+    <bean class="org.tml.esb.SapRequestProcessor" id="sapRequestProcessor"/>
+    <camelContext id="_Ctx_CitiBanking" streamCache="true"
+        xmlns="http://camel.apache.org/schema/spring"
+        xmlns:n0="urn:sap-com:document:sap:rfc:functions"
+        xmlns:ns="https://tatamotors.com/citi/api/1.0"
+        xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+        xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:iso:std:iso:20022:tech:xsd:camt.054.001.02">
+        <dataFormats>
+            <jacksonxml id="jack" unmarshalTypeName="org.tml.esb.CreateCitiFundPostRequest"/>
+        </dataFormats>
+        <route id="_CitiBanking" streamCache="true">
+            <from id="_CitiBank" uri="cxf:bean:CitiEndpoint"/>
+            <doTry id="_doTry1">
+                <bean id="_bean1"
+                    method="request(*************** Request Received from CITI Bank ***************)" ref="logger"/>
+                <setBody id="_setBody1">
+                    <xpath>//ns:CITI_NOTIFICATION_API</xpath>
+                </setBody>
+                <unmarshal id="_unmarshal1" ref="jack"/>
+                <process id="_process1" ref="sapRequestProcessor"/>
+                <marshal id="_marshal1" ref="jack"/>
+                <to id="_to1" uri="xslt:classpath:SoapRequest.xslt"/>
+                <bean id="_bean2"
+                    method="request(*************** Request Sent to SAP ***************)" ref="logger"/>
+                <setHeader headerName="Authorization" id="_setHeader1">
+                    <constant>Basic {{sap.endpoint.token}}</constant>
+                </setHeader>
+                <to id="_toSAP" uri="cxf:bean:sapCitiFundPostingEndpoint"/>
+                <bean id="_bean3"
+                    method="response(*************** Response from SAP ***************)" ref="logger"/>
+                <setBody id="_setBody2">
+                    <xpath>//n0:ZFIRFC_BANK_ECOLLECTION_CITIResponse/I_ZFI_BANK_ECOLLECTION_CITI</xpath>
+                </setBody>
+                <to id="_to1" uri="xslt:classpath:CitiResponse.xslt"/>
+                <bean id="_bean4"
+                    method="response(*************** Response from SAP sent to CITI BANK ***************)" ref="logger"/>
+                <doCatch id="_doCatch1">
+                    <exception>java.net.SocketTimeoutException</exception>
+                    <setFaultBody id="_setFaultBody1">
+                        <constant>Exception Occurred. Data not posted to SAP, Please check logs</constant>
+                    </setFaultBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader2">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log1" message="Exception :: ${exception.stacktrace}"/>
+                </doCatch>
+                <doCatch id="_doCatch2">
+                    <exception>java.lang.Exception</exception>
+                    <setFaultBody id="_setFaultBody2">
+                        <constant>Exception Occurred. Data not posted to SAP, Please check logs</constant>
+                    </setFaultBody>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="_setHeader3">
+                        <constant>500</constant>
+                    </setHeader>
+                    <log id="_log2" message="Exception :: ${exception.stacktrace}"/>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+</beans>
